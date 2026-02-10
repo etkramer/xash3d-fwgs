@@ -928,12 +928,6 @@ static void GL_InitExtensionsBigGL( void )
 	if( glw_state.extended )
 		GL_CheckExtension( "GL_ARB_debug_output", debugoutputfuncs, ARRAYSIZE( debugoutputfuncs ), "gl_debug_output", GL_DEBUG_OUTPUT, 0 );
 
-#if XASH_PSVITA
-	// not all GL1.1 functions are implemented in vitaGL, but there's enough
-	GL_SetExtension( GL_OPENGL_110, true );
-	// init our immediate mode override
-	VGL_ShimInit();
-#endif
 #if !XASH_GLES
 	GL2_ShimInit();
 #endif
@@ -1059,10 +1053,6 @@ void GL_ClearExtensions( void )
 	// now all extensions are disabled
 	memset( glConfig.extension, 0, sizeof( glConfig.extension ));
 	glw_state.initialized = false;
-#if XASH_PSVITA
-	// deinit our immediate mode override
-	VGL_ShimShutdown();
-#endif
 }
 
 //=======================================================================

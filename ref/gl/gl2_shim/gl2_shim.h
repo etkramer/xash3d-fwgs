@@ -1,5 +1,5 @@
 /*
-vgl_shim.h - vitaGL custom immediate mode shim
+gl2_shim.h - GL core/ES2+ fixed-function emulation
 Copyright (C) 2023 fgsfds
 
 This program is free software: you can redistribute it and/or modify

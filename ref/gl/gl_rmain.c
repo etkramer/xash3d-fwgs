@@ -1173,9 +1173,6 @@ R_EndFrame
 */
 void R_EndFrame( void )
 {
-#if XASH_PSVITA
-	VGL_ShimEndFrame();
-#endif
 #if !defined( XASH_GL_STATIC )
 	GL2_ShimEndFrame();
 #endif

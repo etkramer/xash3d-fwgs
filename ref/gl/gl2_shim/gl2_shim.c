@@ -74,11 +74,11 @@ typedef struct
 } gl2wrap_prog_t;
 
 static const char *gl2wrap_vert_src =
-#include "vertex.glsl.inc"
+#include "vertex.glsl"
 ;
 
 static const char *gl2wrap_frag_src =
-#include "fragment.glsl.inc"
+#include "fragment.glsl"
 ;
 
 static int gl2wrap_init = 0;
