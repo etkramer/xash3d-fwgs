@@ -73,13 +73,41 @@ typedef struct
 	GLuint *vao_begin;
 } gl2wrap_prog_t;
 
-static const char *gl2wrap_vert_src =
-#include "vertex.glsl"
-;
+static const char *gl2wrap_vert_src;
+static const char *gl2wrap_frag_src;
 
-static const char *gl2wrap_frag_src =
-#include "fragment.glsl"
-;
+static void GL2_FreeShaderSources( void )
+{
+	if( gl2wrap_vert_src )
+	{
+		Mem_Free( (void *)gl2wrap_vert_src );
+		gl2wrap_vert_src = NULL;
+	}
+	if( gl2wrap_frag_src )
+	{
+		Mem_Free( (void *)gl2wrap_frag_src );
+		gl2wrap_frag_src = NULL;
+	}
+}
+
+static void GL2_LoadShaderSources( void )
+{
+	fs_offset_t size;
+	byte *data;
+
+	if( gl2wrap_vert_src && gl2wrap_frag_src )
+		return;
+
+	data = gEngfuncs.fsapi->LoadFile( "shaders/vertex.glsl", &size, false );
+	if( !data || !size )
+		gEngfuncs.Host_Error( "GL2_ShimInit: missing shader shaders/vertex.glsl\n" );
+	gl2wrap_vert_src = (const char *)data;
+
+	data = gEngfuncs.fsapi->LoadFile( "shaders/fragment.glsl", &size, false );
+	if( !data || !size )
+		gEngfuncs.Host_Error( "GL2_ShimInit: missing shader shaders/fragment.glsl\n" );
+	gl2wrap_frag_src = (const char *)data;
+}
 
 static int gl2wrap_init = 0;
 
@@ -602,6 +630,8 @@ int GL2_ShimInit( void )
 		return 1;
 	}
 
+	GL2_LoadShaderSources();
+
 	gl2wrap_config.vao_mandatory = gEngfuncs.Sys_CheckParm( "-vao" ) || glConfig.context == CONTEXT_TYPE_GL_CORE;
 	gl2wrap_config.incremental = true;
 	gl2wrap_config.async = true;
@@ -780,6 +810,8 @@ void GL2_ShimShutdown( void )
 	}
 
 	memset( &gl2wrap, 0, sizeof( gl2wrap ));
+
+	GL2_FreeShaderSources();
 
 	gl2wrap_init = 0;
 }

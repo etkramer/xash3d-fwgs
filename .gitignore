@@ -41,6 +41,11 @@ DerivedData
 .Spotlight-V100
 .Trashes
 
+# Build output, but keep runtime shaders
+bin/*
+!bin/shaders/
+!bin/shaders/**
+
 # Directories potentially created on remote AFP share
 .AppleDB
 .AppleDesktop
@@ -104,7 +109,6 @@ x64/
 x86/
 build/
 bld/
-[Bb]in/
 [Oo]bj/
 
 # Visual Studio 2015 cache/options directory
