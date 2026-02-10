@@ -113,6 +113,7 @@ typedef struct
 
 	// drawelements renderer
 	vec3_t			arrayverts[MAXSTUDIOVERTS];
+	vec3_t			arraynorms[MAXSTUDIOVERTS];
 	vec2_t			arraycoord[MAXSTUDIOVERTS];
 	unsigned short	arrayelems[MAXSTUDIOVERTS*6];
 	GLubyte			arraycolor[MAXSTUDIOVERTS][4];
@@ -1922,6 +1923,7 @@ static void R_StudioDrawNormalMesh( short *ptricmds, vec3_t *pstudionorms, float
 		{
 			R_StudioSetColorBegin( ptricmds, pstudionorms );
 
+			pglNormal3fv( g_studio.norms[ptricmds[1]] );
 			pglTexCoord2f( ptricmds[2] * s, ptricmds[3] * t );
 			pglVertex3fv( g_studio.verts[ptricmds[0]] );
 		}
@@ -1953,6 +1955,7 @@ static void R_StudioDrawFloatMesh( short *ptricmds, vec3_t *pstudionorms )
 		for( ; i > 0; i--, ptricmds += 4 )
 		{
 			R_StudioSetColorBegin( ptricmds, pstudionorms );
+			pglNormal3fv( g_studio.norms[ptricmds[1]] );
 			pglTexCoord2f( HalfToFloat( ptricmds[2] ), HalfToFloat( ptricmds[3] ));
 			pglVertex3fv( g_studio.verts[ptricmds[0]] );
 		}
@@ -1995,6 +1998,7 @@ static void R_StudioDrawChromeMesh( short *ptricmds, vec3_t *pstudionorms, float
 				lv = g_studio.norms[ptricmds[0]];
 				VectorMA( av, scale, lv, vert );
 				pglColor4ub( clr->r, clr->g, clr->b, 255 );
+				pglNormal3fv( lv );
 				pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
 				pglVertex3fv( vert );
 			}
@@ -2003,6 +2007,7 @@ static void R_StudioDrawChromeMesh( short *ptricmds, vec3_t *pstudionorms, float
 				idx = ptricmds[1];
 				lv = (float *)g_studio.lightvalues[ptricmds[1]];
 				R_StudioSetColorBegin( ptricmds, pstudionorms );
+				pglNormal3fv( g_studio.norms[ptricmds[1]] );
 				pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
 				pglVertex3fv( g_studio.verts[ptricmds[0]] );
 			}
@@ -2087,6 +2092,7 @@ static void R_StudioBuildArrayNormalMesh( short *ptricmds, vec3_t *pstudionorms,
 			g_studio.arraycoord[g_studio.numverts][1] = ptricmds[3] * t;
 
 			VectorCopy( g_studio.verts[ptricmds[0]], g_studio.arrayverts[g_studio.numverts] );
+			VectorCopy( g_studio.norms[ptricmds[1]], g_studio.arraynorms[g_studio.numverts] );
 			g_studio.numverts++;
 		}
 	}
@@ -2130,6 +2136,7 @@ static void R_StudioBuildArrayFloatMesh( short *ptricmds, vec3_t *pstudionorms )
 			g_studio.arraycoord[g_studio.numverts][1] = HalfToFloat( ptricmds[3] );
 
 			VectorCopy( g_studio.verts[ptricmds[0]], g_studio.arrayverts[g_studio.numverts] );
+			VectorCopy( g_studio.norms[ptricmds[1]], g_studio.arraynorms[g_studio.numverts] );
 			g_studio.numverts++;
 		}
 	}
@@ -2182,6 +2189,7 @@ static void R_StudioBuildArrayChromeMesh( short *ptricmds, vec3_t *pstudionorms,
 
 				VectorMA( av, scale, lv, vert );
 				VectorCopy( vert, g_studio.arrayverts[g_studio.numverts] );
+				VectorCopy( lv, g_studio.arraynorms[g_studio.numverts] );
 			}
 			else
 			{
@@ -2189,6 +2197,7 @@ static void R_StudioBuildArrayChromeMesh( short *ptricmds, vec3_t *pstudionorms,
 				R_StudioSetColorArray( ptricmds, pstudionorms, cl );
 
 				VectorCopy( g_studio.verts[ptricmds[0]], g_studio.arrayverts[g_studio.numverts] );
+				VectorCopy( g_studio.norms[ptricmds[1]], g_studio.arraynorms[g_studio.numverts] );
 			}
 
 			g_studio.arraycoord[g_studio.numverts][0] = g_studio.chrome[idx][0] * s;
@@ -2207,6 +2216,9 @@ static void R_StudioDrawArrays( uint startverts, uint startelems )
 	pglEnableClientState( GL_TEXTURE_COORD_ARRAY );
 	pglTexCoordPointer( 2, GL_FLOAT, 0, g_studio.arraycoord );
 
+	pglEnableClientState( GL_NORMAL_ARRAY );
+	pglNormalPointer( GL_FLOAT, 12, g_studio.arraynorms );
+
 	if( !( g_nForceFaceFlags & STUDIO_NF_CHROME ) )
 	{
 		pglEnableClientState( GL_COLOR_ARRAY );
@@ -2222,6 +2234,7 @@ static void R_StudioDrawArrays( uint startverts, uint startelems )
 		pglDrawElements( GL_TRIANGLES, g_studio.numelems - startelems, GL_UNSIGNED_SHORT, &g_studio.arrayelems[startelems] );
 	pglDisableClientState( GL_VERTEX_ARRAY );
 	pglDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	pglDisableClientState( GL_NORMAL_ARRAY );
 	if( !( g_nForceFaceFlags & STUDIO_NF_CHROME ) )
 		pglDisableClientState( GL_COLOR_ARRAY );
 }
@@ -2289,6 +2302,11 @@ static void R_StudioDrawPoints( void )
 		{
 			Matrix3x4_VectorTransform( g_studio.bonestransform[pvertbone[i]], pstudioverts[i], g_studio.verts[i] );
 			R_LightStrength( pvertbone[i], pstudioverts[i], g_studio.lightpos[i] );
+		}
+
+		for( i = 0; i < m_pSubModel->numnorms; i++ )
+		{
+			Matrix3x4_VectorRotate( g_studio.bonestransform[pnormbone[i]], pstudionorms[i], g_studio.norms[i] );
 		}
 	}
 

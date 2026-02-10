@@ -824,7 +824,7 @@ static void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 	float 		lv_tmp;
 	trivertex_t	*verts0;
 	trivertex_t	*verts1;
-	vec3_t		vert, norm;
+	vec3_t		vert, norm, world_norm;
 	int		*order;
 	int		count;
 
@@ -867,6 +867,8 @@ static void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 			VectorNormalize( norm );
 			R_AliasLighting( &lv_tmp, norm );
 			pglColor4f( g_alias.lightcolor[0] * lv_tmp, g_alias.lightcolor[1] * lv_tmp, g_alias.lightcolor[2] * lv_tmp, tr.blend );
+			Matrix4x4_VectorRotate( RI.objectMatrix, norm, world_norm );
+			pglNormal3fv( world_norm );
 			VectorLerp( verts0->v, g_alias.lerpfrac, verts1->v, vert );
 			pglVertex3fv( vert );
 			verts0++, verts1++;
