@@ -141,7 +141,6 @@ static struct
 	qboolean async; // enable MAP_UNSYNCHRONIZED_BIT on temporary mappings
 	qboolean force_flush; // enable MAP_FLUSH_EXPLICIT_BIT and FlushMappedBufferRange calls
 	uint32_t cycle_buffers; // cycle N buffers during draw to reduce locking in non-incremental mode
-	uint32_t version; // glsl version to use
 } gl2wrap_config;
 
 static struct
@@ -250,16 +249,11 @@ static GLuint GL2_GenerateShader( gl2wrap_prog_t *prog, GLenum type )
 	int i;
 	GLint status, len;
 	GLuint id, loc;
-	int version = gl2wrap_config.version;
-
 	shader = shader_buf;
 	//shader[0] = '\n';
 	shader[0] = 0;
 
-	Q_snprintf( shader, MAX_SHADERLEN, "#version %d%s\n", version, version >= 300 && version < 330 ? " es" : "" );
-
-	Q_snprintf( tmp, sizeof( tmp ), "#define VER %d\n", version );
-	Q_strncat( shader, tmp, MAX_SHADERLEN );
+	Q_strncat( shader, "#version 410 core\n", MAX_SHADERLEN );
 
 	for( i = 0; i < GL2_FLAG_MAX; ++i )
 	{
@@ -267,7 +261,6 @@ static GLuint GL2_GenerateShader( gl2wrap_prog_t *prog, GLenum type )
 		Q_strncat( shader, tmp, MAX_SHADERLEN );
 	}
 
-	if( version >= 310 )
 	{
 		loc = 0;
 		for( i = 0; i < GL2_ATTR_MAX; ++i )
@@ -358,10 +351,7 @@ static gl2wrap_prog_t *GL2_GetProg( const GLuint flags )
 		if( FBitSet( flags, BIT( i )))
 		{
 			prog->attridx[i] = loc;
-			if( gl2wrap_config.version <= 300 )
-				pglBindAttribLocationARB( glprog, loc++, gl2wrap_attr_name[i] );
-			else
-				loc++;
+			loc++;
 		}
 		else
 		{
@@ -543,7 +533,7 @@ static qboolean GL2_InitProgs( void )
 	const size_t precache_progs_count = sizeof( precache_progs ) / sizeof( precache_progs[0] );
 	int i;
 
-	gEngfuncs.Con_DPrintf( S_NOTE "GL2_InitProgs: Pre-generating %u progs, version %d...\n", (uint)( precache_progs_count ), gl2wrap_config.version );
+	gEngfuncs.Con_DPrintf( S_NOTE "GL2_InitProgs: Pre-generating %u progs...\n", (uint)( precache_progs_count ));
 	for( i = 0; i < (int)( precache_progs_count ); ++i )
 		if( !GL2_GetProg( precache_progs[i] ))
 				return false;
@@ -667,9 +657,6 @@ int GL2_ShimInit( void )
 	if( gEngfuncs.Sys_CheckParm( "-noincremental" ))
 		gl2wrap_config.incremental = gl2wrap_config.buf_storage = false;
 
-	gl2wrap_config.version = 310;
-	if( gEngfuncs.Sys_CheckParm( "-minshaders" ))
-		gl2wrap_config.version = 100;
 	if( gl2wrap_config.buf_storage )
 		gl2wrap_config.incremental = gl2wrap_config.vao_mandatory = true;
 	if( !pglBindVertexArray || !gl2wrap_config.vao_mandatory )
@@ -680,7 +667,7 @@ int GL2_ShimInit( void )
 		gl2wrap_config.cycle_buffers = 4;
 	if( !gl2wrap_config.vao_mandatory )
 		gl2wrap_config.cycle_buffers = 1;
-	gEngfuncs.Con_Printf( S_NOTE "GL2_ShimInit: config: %s%s%s%s%s%s%sCYCLE=%d VER=%d\n",
+	gEngfuncs.Con_Printf( S_NOTE "GL2_ShimInit: config: %s%s%s%s%s%s%sCYCLE=%d\n",
 		gl2wrap_config.buf_storage ? "BUF_STOR " : "",
 		gl2wrap_config.buf_storage&&gl2wrap_config.coherent ? "COHERENT " : "",
 		gl2wrap_config.async ? "ASYNC " : "",
@@ -688,7 +675,7 @@ int GL2_ShimInit( void )
 		gl2wrap_config.force_flush ? "FLUSH " : "",
 		gl2wrap_config.vao_mandatory ? "VAO " : "",
 		gl2wrap_config.supports_mapbuffer ? "MAP " : "",
-		gl2wrap_config.cycle_buffers, gl2wrap_config.version );
+		gl2wrap_config.cycle_buffers );
 
 	memset( &gl2wrap, 0, sizeof( gl2wrap ));
 	GL2_ShimInstall();
@@ -742,19 +729,7 @@ int GL2_ShimInit( void )
 	gEngfuncs.Con_DPrintf( S_NOTE "%s: %u bytes allocated for vertex buffer\n", __func__, total );
 
 	if( !GL2_InitProgs( ))
-	{
-		gl2wrap_config.version = 300;
-		if( !GL2_InitProgs( ))
-		{
-			gl2wrap_config.version = 110;
-			if( !GL2_InitProgs( ))
-			{
-				gl2wrap_config.version = 100;
-				if( !GL2_InitProgs( ))
-					gEngfuncs.Host_Error( "%s: Failed to compile shaders!\n", __func__ );
-			}
-		}
-	}
+		gEngfuncs.Host_Error( "%s: Failed to compile shaders!\n", __func__ );
 
 	gl2wrap_init = 1;
 	return 0;

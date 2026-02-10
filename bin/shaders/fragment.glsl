@@ -1,19 +1,3 @@
-#if VER <= 300
-#define layout(x)
-#endif
-#if VER < 300
-#define out attribute
-#define in varying
-#define texture texture2D
-#endif
-#if VER >= 130 || VER == 100
-precision mediump float;
-#endif
-#if VER == 100
-#define PREC mediump
-#else
-#define PREC
-#endif
 #if ATTR_TEXCOORD0
 uniform sampler2D uTex0;
 #endif
@@ -24,41 +8,37 @@ uniform sampler2D uTex1;
 uniform float uAlphaTest;
 #endif
 #if FEAT_FOG
-uniform PREC vec4 uFog;
+uniform vec4 uFog;
 #endif
-uniform PREC vec4 uColor;
+uniform vec4 uColor;
+
 #if ATTR_COLOR
-in PREC vec4 vColor;
+in vec4 vColor;
 #endif
 #if ATTR_TEXCOORD0
-in PREC vec2 vTexCoord0;
+in vec2 vTexCoord0;
 #endif
 #if ATTR_TEXCOORD1
-in PREC vec2 vTexCoord1;
+in vec2 vTexCoord1;
 #endif
-#if ATTR_NORMAL
-in PREC vec2 vNormal;
-#endif
-#if VER >= 300
+
 out vec4 oFragColor;
-#else
-#define oFragColor gl_FragColor
-#endif
+
 void main()
 {
 #if ATTR_COLOR
-	PREC vec4 c = vColor;
+	vec4 c = vColor;
 #else
-	PREC vec4 c = uColor;
+	vec4 c = uColor;
 #endif
 #if ATTR_TEXCOORD0
-	c = c * texture(uTex0, vTexCoord0);
+	c *= texture(uTex0, vTexCoord0);
 #endif
 #if ATTR_TEXCOORD1
-	c = c * texture(uTex1, vTexCoord1);
+	c *= texture(uTex1, vTexCoord1);
 #endif
 #if FEAT_ALPHA_TEST
-	if(c.a <= uAlphaTest)
+	if( c.a <= uAlphaTest )
 		discard;
 #endif
 #if FEAT_FOG
