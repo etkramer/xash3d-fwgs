@@ -15,11 +15,15 @@ GNU General Public License for more details.
 
 #include "gl_local.h"
 
+// Debug mode cvar: 0 = off, 1 = show g-buffer debug view
+static cvar_t *gl_deferred_debug;
+
 // G-buffer state
 static struct
 {
 	GLuint fbo;
 	GLuint albedoTex;
+	GLuint normalTex;
 	GLuint lightmapTex;
 	GLuint depthTex;
 	int width;
@@ -40,7 +44,9 @@ static struct
 	GLuint vertShader;
 	GLuint fragShader;
 	GLint uAlbedo;
+	GLint uNormal;
 	GLint uLightmap;
+	GLint uDebugMode;
 	GLuint vao;
 	qboolean initialized;
 } lightingShader;
@@ -184,14 +190,18 @@ static qboolean R_InitLightingShader( void )
 
 	// Get uniform locations
 	lightingShader.uAlbedo = pglGetUniformLocationARB( lightingShader.program, "uAlbedo" );
+	lightingShader.uNormal = pglGetUniformLocationARB( lightingShader.program, "uNormal" );
 	lightingShader.uLightmap = pglGetUniformLocationARB( lightingShader.program, "uLightmap" );
+	lightingShader.uDebugMode = pglGetUniformLocationARB( lightingShader.program, "uDebugMode" );
 
 	// Set texture units (these don't change)
 	pglUseProgramObjectARB( lightingShader.program );
 	if( lightingShader.uAlbedo >= 0 )
 		pglUniform1iARB( lightingShader.uAlbedo, 0 );
+	if( lightingShader.uNormal >= 0 )
+		pglUniform1iARB( lightingShader.uNormal, 1 );
 	if( lightingShader.uLightmap >= 0 )
-		pglUniform1iARB( lightingShader.uLightmap, 1 );
+		pglUniform1iARB( lightingShader.uLightmap, 2 );
 	pglUseProgramObjectARB( 0 );
 
 	// Create VAO for fullscreen triangle (required for core profile)
@@ -237,7 +247,7 @@ R_CreateGBuffer
 */
 static qboolean R_CreateGBuffer( int width, int height )
 {
-	GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	GLenum drawBuffers[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	GLenum status;
 
 	if( gbuffer.initialized && gbuffer.width == width && gbuffer.height == height )
@@ -249,6 +259,7 @@ static qboolean R_CreateGBuffer( int width, int height )
 	if( gbuffer.initialized )
 	{
 		pglDeleteTextures( 1, &gbuffer.albedoTex );
+		pglDeleteTextures( 1, &gbuffer.normalTex );
 		pglDeleteTextures( 1, &gbuffer.lightmapTex );
 		pglDeleteTextures( 1, &gbuffer.depthTex );
 		pglDeleteFramebuffers( 1, &gbuffer.fbo );
@@ -262,7 +273,7 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglGenFramebuffers( 1, &gbuffer.fbo );
 	pglBindFramebuffer( GL_FRAMEBUFFER, gbuffer.fbo );
 
-	// Create albedo texture
+	// Create albedo texture (RGB = diffuse color, A = unused)
 	pglGenTextures( 1, &gbuffer.albedoTex );
 	pglBindTexture( GL_TEXTURE_2D, gbuffer.albedoTex );
 	pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
@@ -272,6 +283,16 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gbuffer.albedoTex, 0 );
 
+	// Create normal texture (RGB = world-space normal, A = unused)
+	pglGenTextures( 1, &gbuffer.normalTex );
+	pglBindTexture( GL_TEXTURE_2D, gbuffer.normalTex );
+	pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gbuffer.normalTex, 0 );
+
 	// Create lightmap texture
 	pglGenTextures( 1, &gbuffer.lightmapTex );
 	pglBindTexture( GL_TEXTURE_2D, gbuffer.lightmapTex );
@@ -280,7 +301,7 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gbuffer.lightmapTex, 0 );
+	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gbuffer.lightmapTex, 0 );
 
 	// Create depth texture
 	pglGenTextures( 1, &gbuffer.depthTex );
@@ -291,7 +312,7 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gbuffer.depthTex, 0 );
 
 	// Set draw buffers
-	pglDrawBuffersARB( 2, drawBuffers );
+	pglDrawBuffersARB( 3, drawBuffers );
 
 	// Check framebuffer status
 	status = pglCheckFramebufferStatus( GL_FRAMEBUFFER );
@@ -321,6 +342,7 @@ static void R_DestroyGBuffer( void )
 		return;
 
 	pglDeleteTextures( 1, &gbuffer.albedoTex );
+	pglDeleteTextures( 1, &gbuffer.normalTex );
 	pglDeleteTextures( 1, &gbuffer.lightmapTex );
 	pglDeleteTextures( 1, &gbuffer.depthTex );
 	pglDeleteFramebuffers( 1, &gbuffer.fbo );
@@ -335,6 +357,9 @@ R_InitDeferred
 */
 qboolean R_InitDeferred( void )
 {
+	// Register debug cvar
+	gl_deferred_debug = gEngfuncs.Cvar_Get( "gl_deferred_debug", "0", FCVAR_GLCONFIG, "show deferred rendering debug view (0=off, 1=show g-buffer)" );
+
 	// Check if FBO functions are available
 	if( !pglGenFramebuffers || !pglBindFramebuffer || !pglFramebufferTexture2D )
 	{
@@ -483,8 +508,12 @@ Renders the fullscreen lighting pass
 */
 void R_DeferredLightingPass( void )
 {
+	int debugMode;
+
 	if( !lightingShader.initialized || !gbuffer.initialized )
 		return;
+
+	debugMode = gl_deferred_debug ? (int)gl_deferred_debug->value : 0;
 
 	// Set up viewport for full screen
 	pglViewport( 0, 0, gbuffer.width, gbuffer.height );
@@ -499,11 +528,21 @@ void R_DeferredLightingPass( void )
 	// Use lighting shader
 	pglUseProgramObjectARB( lightingShader.program );
 
+	// Set debug mode uniform
+	if( lightingShader.uDebugMode >= 0 )
+		pglUniform1iARB( lightingShader.uDebugMode, debugMode );
+
 	// Bind G-buffer textures
+	// Unit 0: Albedo
 	pglActiveTexture( GL_TEXTURE0_ARB );
 	pglBindTexture( GL_TEXTURE_2D, gbuffer.albedoTex );
 
+	// Unit 1: Normal
 	pglActiveTexture( GL_TEXTURE0_ARB + 1 );
+	pglBindTexture( GL_TEXTURE_2D, gbuffer.normalTex );
+
+	// Unit 2: Lightmap
+	pglActiveTexture( GL_TEXTURE0_ARB + 2 );
 	pglBindTexture( GL_TEXTURE_2D, gbuffer.lightmapTex );
 
 	// Bind VAO and draw fullscreen triangle
@@ -512,6 +551,8 @@ void R_DeferredLightingPass( void )
 	pglBindVertexArray( 0 );
 
 	// Cleanup
+	pglActiveTexture( GL_TEXTURE0_ARB + 2 );
+	pglBindTexture( GL_TEXTURE_2D, 0 );
 	pglActiveTexture( GL_TEXTURE0_ARB + 1 );
 	pglBindTexture( GL_TEXTURE_2D, 0 );
 	pglActiveTexture( GL_TEXTURE0_ARB );

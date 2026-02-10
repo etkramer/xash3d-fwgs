@@ -21,11 +21,15 @@ in vec2 vTexCoord0;
 #if ATTR_TEXCOORD1
 in vec2 vTexCoord1;
 #endif
+#if ATTR_NORMAL
+in vec3 vNormal;
+#endif
 
 #if FEAT_GBUFFER
 // G-buffer outputs
 layout(location = 0) out vec4 oAlbedo;
-layout(location = 1) out vec4 oLightmap;
+layout(location = 1) out vec4 oNormal;
+layout(location = 2) out vec4 oLightmap;
 #else
 out vec4 oFragColor;
 #endif
@@ -47,14 +51,23 @@ void main()
 #endif
 
 #if FEAT_GBUFFER
-	// G-buffer mode: output albedo and lightmap separately
-	#if ATTR_TEXCOORD1
-	vec4 lightmap = texture(uTex1, vTexCoord1);
-	#else
-	vec4 lightmap = vec4(1.0);
-	#endif
+	// G-buffer mode: output albedo, normal, and lightmap separately
 	oAlbedo = c;
-	oLightmap = lightmap;
+
+	// Output world-space normal (pack from [-1,1] to [0,1] range for storage)
+	#if ATTR_NORMAL
+	oNormal = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);
+	#else
+	// No normal available, output neutral up vector
+	oNormal = vec4(0.5, 0.5, 1.0, 1.0);
+	#endif
+
+	// Output lightmap
+	#if ATTR_TEXCOORD1
+	oLightmap = texture(uTex1, vTexCoord1);
+	#else
+	oLightmap = vec4(1.0);
+	#endif
 #else
 	// Forward mode: combine albedo and lightmap
 	#if ATTR_TEXCOORD1
