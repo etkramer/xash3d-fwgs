@@ -1052,18 +1052,6 @@ static void R_CheckCvars( void )
 		rebuild = true;
 	}
 
-	if( FBitSet( r_vbo.flags, FCVAR_CHANGED ))
-	{
-		ClearBits( r_vbo.flags, FCVAR_CHANGED );
-
-		R_EnableVBO( r_vbo.value ? true : false );
-		if( R_HasEnabledVBO( ))
-			R_GenerateVBO();
-
-		if( gl_overbright.value )
-			rebuild = true;
-	}
-
 	if( FBitSet( r_vbo_overbrightmode.flags, FCVAR_CHANGED ) && gl_overbright.value )
 	{
 		ClearBits( r_vbo_overbrightmode.flags, FCVAR_CHANGED );

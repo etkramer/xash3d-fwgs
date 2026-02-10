@@ -26,7 +26,6 @@ CVAR_DEFINE_AUTO( r_lockpvs, "0", FCVAR_CHEAT, "lockpvs area at current point (p
 CVAR_DEFINE_AUTO( r_lockfrustum, "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 CVAR_DEFINE_AUTO( r_traceglow, "0", FCVAR_GLCONFIG, "cull flares behind models" );
 CVAR_DEFINE_AUTO( gl_round_down, "2", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "round texture sizes to nearest POT value" );
-CVAR_DEFINE( r_vbo, "gl_vbo", "1", FCVAR_GLCONFIG, "draw world using VBO (known to be glitchy)" );
 CVAR_DEFINE( r_vbo_detail, "gl_vbo_detail", "1", FCVAR_GLCONFIG, "detail vbo mode (0: disable, 1: multipass, 2: singlepass, broken decal dlights)" );
 CVAR_DEFINE( r_vbo_dlightmode, "gl_vbo_dlightmode", "1", FCVAR_GLCONFIG, "vbo dlight rendering mode (0-1)" );
 CVAR_DEFINE( r_vbo_overbrightmode, "gl_vbo_overbrightmode", "0", FCVAR_GLCONFIG, "vbo overbright rendering mode (0-1)" );
@@ -1091,7 +1090,6 @@ static void GL_InitCommands( void )
 	gEngfuncs.Cvar_RegisterVariable( &r_ripple_updatetime );
 	gEngfuncs.Cvar_RegisterVariable( &r_ripple_spawntime );
 	gEngfuncs.Cvar_RegisterVariable( &r_shadows );
-	gEngfuncs.Cvar_RegisterVariable( &r_vbo );
 	gEngfuncs.Cvar_RegisterVariable( &r_vbo_dlightmode );
 	gEngfuncs.Cvar_RegisterVariable( &r_vbo_overbrightmode );
 	gEngfuncs.Cvar_RegisterVariable( &r_vbo_detail );
@@ -1129,37 +1127,12 @@ static void GL_InitCommands( void )
 ===============
 R_CheckVBO
 
-register VBO cvars and get default value
+check VBO support and enable if available
 ===============
 */
 static void R_CheckVBO( void )
 {
-	qboolean disable = false;
-	int flags = 0;
-
-	// some bad GLES1 implementations breaks dlights completely
-	if( glConfig.max_texture_units < 3 )
-		disable = true;
-
-#if XASH_MOBILE_PLATFORM
-	// VideoCore4 drivers have a problem with mixing VBO and client arrays
-	// Disable it, as there is no suitable workaround here
-	if( Q_stristr( glConfig.renderer_string, "VideoCore IV" ) || Q_stristr( glConfig.renderer_string, "vc4" ) )
-		disable = true;
-#endif
-
-	// we do not want to write vbo code that does not use multitexture
-	if( !GL_Support( GL_ARB_VERTEX_BUFFER_OBJECT_EXT ) || !GL_Support( GL_ARB_MULTITEXTURE ) || glConfig.max_texture_units < 2 )
-	{
-		flags = FCVAR_READ_ONLY;
-		disable = true;
-	}
-
-	if( disable )
-	{
-		gEngfuncs.Cvar_FullSet( r_vbo.name, "0", flags );
-		gEngfuncs.Cvar_FullSet( r_vbo_dlightmode.name, "0", flags );
-	}
+	R_EnableVBO( true );
 }
 
 /*
