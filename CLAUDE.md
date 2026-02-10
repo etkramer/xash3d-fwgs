@@ -14,10 +14,10 @@ The project uses **WAF** (Python-based build system). The `waf` executable is in
 
 ```bash
 # Build and install to ./bin/
-./scripts/build
+./build.sh
 
 # Run the engine
-./scripts/run
+./run.sh
 ```
 
 ### Manual Build Commands

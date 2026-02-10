@@ -17,4 +17,4 @@ else
 fi
 
 cd "$BIN_DIR"
-exec "$XASH_BIN" "$@"
+exec "$XASH_BIN" -console "$@"

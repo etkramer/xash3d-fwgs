@@ -10,7 +10,16 @@ cd "$ROOT_DIR"
 # Configure if not already configured
 if [ ! -f build/c4che/_cache.py ]; then
 	echo "Configuring build..."
-	./waf configure "$@"
+
+	# Auto-detect SDL2 on macOS via pkg-config (Homebrew)
+	SDL2_ARGS=""
+	if [ "$(uname)" = "Darwin" ]; then
+		if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists sdl2; then
+			SDL2_ARGS="--sdl-use-pkgconfig"
+		fi
+	fi
+
+	./waf configure $SDL2_ARGS "$@"
 fi
 
 # Build
