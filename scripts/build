@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+BIN_DIR="$ROOT_DIR/bin"
+
+cd "$ROOT_DIR"
+
+# Configure if not already configured
+if [ ! -f build/c4che/_cache.py ]; then
+	echo "Configuring build..."
+	./waf configure "$@"
+fi
+
+# Build
+echo "Building..."
+./waf build
+
+# Install to bin directory
+echo "Installing to $BIN_DIR..."
+./waf install --destdir="$BIN_DIR"
+
+echo "Build complete. Binaries installed to $BIN_DIR"

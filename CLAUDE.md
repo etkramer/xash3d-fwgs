@@ -10,7 +10,17 @@ Xash3D FWGS is a cross-platform game engine providing Half-Life (GoldSrc) compat
 
 The project uses **WAF** (Python-based build system). The `waf` executable is included in the repository.
 
-### Common Build Commands
+### Quick Start
+
+```bash
+# Build and install to ./bin/
+./scripts/build
+
+# Run the engine
+./scripts/run
+```
+
+### Manual Build Commands
 
 ```bash
 # View all options

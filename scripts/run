@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+BIN_DIR="$ROOT_DIR/bin"
+
+# Find the xash3d executable
+if [ -x "$BIN_DIR/xash3d" ]; then
+	XASH_BIN="$BIN_DIR/xash3d"
+elif [ -x "$BIN_DIR/xash3d.exe" ]; then
+	XASH_BIN="$BIN_DIR/xash3d.exe"
+else
+	echo "Error: xash3d executable not found in $BIN_DIR"
+	echo "Run scripts/build first."
+	exit 1
+fi
+
+cd "$BIN_DIR"
+exec "$XASH_BIN" "$@"
