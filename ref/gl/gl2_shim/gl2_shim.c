@@ -1475,6 +1475,11 @@ static void APIENTRY GL2_TexCoordPointer( GLint size, GLenum type, GLsizei strid
 	GL2_SetPointer( GL2_ATTR_TEXCOORD0 + gl2wrap_state.tmu, size, type, stride, pointer );
 }
 
+static void APIENTRY GL2_NormalPointer( GLenum type, GLsizei stride, const GLvoid *pointer )
+{
+	GL2_SetPointer( GL2_ATTR_NORMAL, 3, type, stride, pointer );
+}
+
 static unsigned int GL2_GetArrIdx( GLenum array )
 {
 	switch( array )
@@ -1486,6 +1491,8 @@ static unsigned int GL2_GetArrIdx( GLenum array )
 	case GL_TEXTURE_COORD_ARRAY:
 		Assert( gl2wrap_state.tmu < 2 );
 		return GL2_ATTR_TEXCOORD0 + gl2wrap_state.tmu;
+	case GL_NORMAL_ARRAY:
+		return GL2_ATTR_NORMAL;
 	}
 	return 0;
 }
@@ -1999,6 +2006,7 @@ void GL2_ShimInstall( void )
 	GL2_OVERRIDE_PTR( VertexPointer )
 	GL2_OVERRIDE_PTR( ColorPointer )
 	GL2_OVERRIDE_PTR( TexCoordPointer )
+	GL2_OVERRIDE_PTR( NormalPointer )
 
 #ifdef QUAD_BATCH
 	GL2_OVERRIDE_PTR_B( BindTexture )

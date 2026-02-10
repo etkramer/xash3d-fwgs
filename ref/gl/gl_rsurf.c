@@ -1868,6 +1868,7 @@ For each texture build index arrays (vbotexture_t) every frame.
 typedef struct vbovertex_s
 {
 	vec3_t pos;
+	vec3_t normal;
 	vec2_t gl_tc;
 	vec2_t lm_tc;
 #ifdef NO_TEXTURE_MATRIX
@@ -2194,6 +2195,13 @@ void R_GenerateVBO( void )
 					float *v = surf->polys->verts[l];
 
 					VectorCopy( v, vbo->array[len + l].pos );
+
+					// Store face normal (accounting for back-facing surfaces)
+					if( FBitSet( surf->flags, SURF_PLANEBACK ))
+						VectorNegate( surf->plane->normal, vbo->array[len + l].normal );
+					else
+						VectorCopy( surf->plane->normal, vbo->array[len + l].normal );
+
 					vbo->array[len + l].gl_tc[0] = v[3];
 					vbo->array[len + l].gl_tc[1] = v[4];
 					vbo->array[len + l].lm_tc[0] = v[5];
@@ -2485,6 +2493,10 @@ static void R_SetupVBOArrayStatic( vboarray_t *vbo, qboolean drawlightmap, qbool
 
 			pglEnableClientState( GL_VERTEX_ARRAY );
 			pglVertexPointer( 3, GL_FLOAT, sizeof( vbovertex_t ), (void*)offsetof(vbovertex_t,pos) );
+
+			// Set up normal array for deferred rendering
+			pglEnableClientState( GL_NORMAL_ARRAY );
+			pglNormalPointer( GL_FLOAT, sizeof( vbovertex_t ), (void*)offsetof(vbovertex_t,normal) );
 		}
 
 
@@ -3184,6 +3196,7 @@ static void R_ClearVBOState( qboolean drawlightmap, qboolean drawtextures )
 
 
 	pglDisableClientState( GL_VERTEX_ARRAY );
+	pglDisableClientState( GL_NORMAL_ARRAY );
 	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
 
 	vboarray.astate = VBO_ARRAY_NONE;
