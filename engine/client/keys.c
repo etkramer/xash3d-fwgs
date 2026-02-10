@@ -38,7 +38,7 @@ static enginekey_t	keys[256];
 
 static const keyname_t keynames[] =
 {
-{"TAB",		K_TAB,		""		},
+{"TAB",		K_TAB,		"toggle gl_deferred"		},
 {"ENTER",		K_ENTER,		""		},
 {"ESCAPE",	K_ESCAPE, 	"cancelselect"		}, // hardcoded
 {"SPACE",		K_SPACE,		"+jump"		},

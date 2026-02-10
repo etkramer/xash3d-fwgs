@@ -17,6 +17,8 @@ GNU General Public License for more details.
 
 // Debug mode cvar: 0 = off, 1 = show g-buffer debug view
 static cvar_t *gl_deferred_debug;
+// Enable deferred rendering
+static cvar_t *gl_deferred;
 
 // G-buffer state
 static struct
@@ -357,6 +359,9 @@ R_InitDeferred
 */
 qboolean R_InitDeferred( void )
 {
+	// Register enable cvar
+	gl_deferred = gEngfuncs.Cvar_Get( "gl_deferred", "1", FCVAR_GLCONFIG, "enable deferred rendering (0=off, 1=on)" );
+
 	// Register debug cvar
 	gl_deferred_debug = gEngfuncs.Cvar_Get( "gl_deferred_debug", "0", FCVAR_GLCONFIG, "show deferred rendering debug view (0=off, 1=show g-buffer)" );
 
@@ -405,7 +410,7 @@ void R_BeginGBufferPass( void )
 	int width, height;
 
 	// Skip if deferred rendering not available
-	if( !deferredAvailable )
+	if( !deferredAvailable || !gl_deferred )
 		return;
 
 	width = RI.viewport[2];
@@ -469,7 +474,7 @@ Returns true if deferred rendering is currently active
 */
 qboolean R_DeferredActive( void )
 {
-	return deferredAvailable && gbuffer.initialized && lightingShader.initialized;
+	return deferredAvailable && gbuffer.initialized && lightingShader.initialized && gl_deferred;
 }
 
 /*
