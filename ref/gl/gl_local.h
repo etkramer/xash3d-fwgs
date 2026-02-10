@@ -545,6 +545,7 @@ void R_EndGBufferPass( void );
 void R_DeferredLightingPass( void );
 void R_BlitGBufferDepth( void );
 qboolean R_DeferredActive( void );
+qboolean R_InGBufferPass( void );
 
 //
 // gl_opengl.c

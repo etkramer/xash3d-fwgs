@@ -23,3 +23,4 @@ void GL2_ShimInstall( void );
 void GL2_ShimShutdown( void );
 void GL2_ShimEndFrame( void );
 void GL2_SetGBufferMode( int enable );
+void GL2_InvalidateProg( void );

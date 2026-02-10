@@ -2025,4 +2025,18 @@ void GL2_SetGBufferMode( qboolean enable )
 {
 	gl2wrap_state.gbuffer_mode = enable;
 }
+
+/*
+================
+GL2_InvalidateProg
+
+Invalidate the current program state, forcing the shim to re-bind
+the appropriate shader on the next draw call. Call this after using
+external shaders that bypass the GL2 shim.
+================
+*/
+void GL2_InvalidateProg( void )
+{
+	gl2wrap.cur_prog = NULL;
+}
 #endif

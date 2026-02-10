@@ -37,9 +37,6 @@ static qboolean inGBufferPass = false;
 // Track if deferred rendering is available
 static qboolean deferredAvailable = false;
 
-// Track previous VBO state to restore after g-buffer pass
-static qboolean savedVBOState = false;
-
 // Lighting shader state
 static struct
 {
@@ -477,6 +474,18 @@ qboolean R_DeferredActive( void )
 
 /*
 ================
+R_InGBufferPass
+
+Returns true if currently rendering to the g-buffer
+================
+*/
+qboolean R_InGBufferPass( void )
+{
+	return inGBufferPass;
+}
+
+/*
+================
 R_BlitGBufferDepth
 
 Copies the G-buffer depth to the default framebuffer so forward-rendered
@@ -562,6 +571,11 @@ void R_DeferredLightingPass( void )
 	pglBindTexture( GL_TEXTURE_2D, 0 );
 
 	pglUseProgramObjectARB( 0 );
+
+#if !XASH_GL_STATIC
+	// Invalidate GL2 shim program state since we used an external shader
+	GL2_InvalidateProg();
+#endif
 
 	// Restore GL state for forward rendering pass
 	pglDepthMask( GL_TRUE );

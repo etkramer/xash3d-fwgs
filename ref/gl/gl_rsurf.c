@@ -1018,6 +1018,11 @@ static void R_BlendLightmaps( void )
 	if( !R_HasLightmap() )
 		return;
 
+	// Skip lightmap blending in g-buffer pass - the g-buffer shader
+	// already outputs lightmap data to a separate channel
+	if( R_InGBufferPass() )
+		return;
+
 	GL_SetupFogColorForSurfacesEx( r_detailtextures.value ? 3 : 2, 1.0f, true );
 
 	if( !r_lightmap->value )
@@ -1152,6 +1157,11 @@ static void R_RenderFullbrights( void )
 	if( !R_SeparatePassActive( &draw_fullbrights ))
 		return;
 
+	// Skip fullbrights in g-buffer pass - additive blending would corrupt
+	// the g-buffer. Fullbrights should be rendered in forward pass.
+	if( R_InGBufferPass() )
+		return;
+
 	R_AllowFog( false );
 	pglEnable( GL_BLEND );
 	pglDepthMask( GL_FALSE );
@@ -1207,6 +1217,11 @@ static void R_RenderDetails( int passes )
 	int		i;
 
 	if( !R_SeparatePassActive( &draw_details ))
+		return;
+
+	// Skip detail textures in g-buffer pass - multiplicative blending
+	// would corrupt the g-buffer outputs
+	if( R_InGBufferPass() )
 		return;
 
 	GL_SetupFogColorForSurfacesEx( passes, passes == 2 ? 0.5f : 1.0f, false );
