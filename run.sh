@@ -17,4 +17,4 @@ else
 fi
 
 cd "$BIN_DIR"
-exec "$XASH_BIN" -console "$@"
+exec "$XASH_BIN" -console +map c1a0a "$@"
