@@ -26,8 +26,8 @@ CVAR_DEFINE_AUTO( r_lockpvs, "0", FCVAR_CHEAT, "lockpvs area at current point (p
 CVAR_DEFINE_AUTO( r_lockfrustum, "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 CVAR_DEFINE_AUTO( r_traceglow, "0", FCVAR_GLCONFIG, "cull flares behind models" );
 CVAR_DEFINE_AUTO( gl_round_down, "2", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "round texture sizes to nearest POT value" );
-CVAR_DEFINE( r_vbo, "gl_vbo", "0", FCVAR_GLCONFIG, "draw world using VBO (known to be glitchy)" );
-CVAR_DEFINE( r_vbo_detail, "gl_vbo_detail", "0", FCVAR_GLCONFIG, "detail vbo mode (0: disable, 1: multipass, 2: singlepass, broken decal dlights)" );
+CVAR_DEFINE( r_vbo, "gl_vbo", "1", FCVAR_GLCONFIG, "draw world using VBO (known to be glitchy)" );
+CVAR_DEFINE( r_vbo_detail, "gl_vbo_detail", "1", FCVAR_GLCONFIG, "detail vbo mode (0: disable, 1: multipass, 2: singlepass, broken decal dlights)" );
 CVAR_DEFINE( r_vbo_dlightmode, "gl_vbo_dlightmode", "1", FCVAR_GLCONFIG, "vbo dlight rendering mode (0-1)" );
 CVAR_DEFINE( r_vbo_overbrightmode, "gl_vbo_overbrightmode", "0", FCVAR_GLCONFIG, "vbo overbright rendering mode (0-1)" );
 CVAR_DEFINE_AUTO( r_ripple, "0", FCVAR_GLCONFIG, "enable software-like water texture ripple simulation" );
@@ -364,6 +364,16 @@ static const dllfunc_t vaofuncs[] =
 { GL_CALL( glDeleteVertexArrays ) },
 { GL_CALL( glGenVertexArrays ) },
 { GL_CALL( glIsVertexArray ) },
+};
+
+static const dllfunc_t fbofuncs[] =
+{
+{ GL_CALL( glBindFramebuffer ) },
+{ GL_CALL( glDeleteFramebuffers ) },
+{ GL_CALL( glGenFramebuffers ) },
+{ GL_CALL( glCheckFramebufferStatus ) },
+{ GL_CALL( glFramebufferTexture2D ) },
+{ GL_CALL( glDrawBuffersARB ) },
 };
 
 #if XASH_GLES
@@ -889,6 +899,7 @@ static void GL_InitExtensionsBigGL( void )
 	GL_CheckExtension( "GL_ARB_buffer_storage", bufferstoragefuncs, ARRAYSIZE( bufferstoragefuncs ), "gl_buffer_storage", GL_BUFFER_STORAGE_EXT, 4.4);
 	GL_CheckExtension( "GL_ARB_map_buffer_range", mapbufferrangefuncs, ARRAYSIZE( mapbufferrangefuncs ), "gl_map_buffer_range", GL_MAP_BUFFER_RANGE_EXT , 3.0);
 	GL_CheckExtension( "GL_ARB_draw_elements_base_vertex", drawrangeelementsbasevertexfuncs, ARRAYSIZE( drawrangeelementsbasevertexfuncs ), "gl_drawrangeelementsbasevertex", GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT, 3.2 );
+	GL_CheckExtension( "GL_ARB_framebuffer_object", fbofuncs, ARRAYSIZE( fbofuncs ), "gl_framebuffer_object", GL_FRAMEBUFFER_OBJECT_EXT, 3.0 );
 #endif
 	if( GL_CheckExtension( "GL_ARB_shading_language_100", NULL, 0, NULL, GL_SHADER_GLSL100_EXT, 2.0 ))
 	{
@@ -1210,6 +1221,7 @@ qboolean R_Init( void )
 	R_AliasInit();
 	R_ClearDecals();
 	R_ClearScene();
+	R_InitDeferred();
 
 	return true;
 }
@@ -1224,6 +1236,7 @@ void R_Shutdown( void )
 	if( !glw_state.initialized )
 		return;
 
+	R_ShutdownDeferred();
 	GL_RemoveCommands();
 	R_ShutdownImages();
 #if !XASH_GLES && !XASH_GL_STATIC

@@ -536,6 +536,16 @@ void Mod_SetOrthoBounds( const float *mins, const float *maxs );
 void CL_AddCustomBeam( cl_entity_t *pEnvBeam );
 
 //
+// gl_deferred.c
+//
+qboolean R_InitDeferred( void );
+void R_ShutdownDeferred( void );
+void R_BeginGBufferPass( void );
+void R_EndGBufferPass( void );
+void R_DeferredLightingPass( void );
+qboolean R_DeferredActive( void );
+
+//
 // gl_opengl.c
 //
 #define GL_CheckForErrors() GL_CheckForErrors_( __FILE__, __LINE__ )
@@ -600,6 +610,7 @@ enum
 	GL_BUFFER_STORAGE_EXT,
 	GL_MAP_BUFFER_RANGE_EXT,
 	GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT,
+	GL_FRAMEBUFFER_OBJECT_EXT,
 	GL_EXTCOUNT,		// must be last
 };
 

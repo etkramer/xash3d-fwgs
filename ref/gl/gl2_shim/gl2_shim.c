@@ -56,6 +56,7 @@ enum gl2wrap_flag_e
 	GL2_FLAG_ALPHA_TEST = GL2_ATTR_MAX, // 16
 	GL2_FLAG_FOG,                       // 32
 	GL2_FLAG_NORMAL,                    // 64
+	GL2_FLAG_GBUFFER,                   // 128
 	GL2_FLAG_MAX
 };
 
@@ -155,6 +156,7 @@ static struct
 {
 	qboolean alpha_test;
 	qboolean fog;
+	qboolean gbuffer_mode;
 	GLuint vbo;
 	GLuint elem_vbo;
 	GLuint tmu;
@@ -182,6 +184,7 @@ static const char *gl2wrap_flag_name[GL2_FLAG_MAX] =
 	"FEAT_ALPHA_TEST",
 	"FEAT_FOG",
 	"ATTR_NORMAL",
+	"FEAT_GBUFFER",
 };
 
 static const char *gl2wrap_attr_name[GL2_ATTR_MAX] =
@@ -918,8 +921,10 @@ static void GL2_FlushPrims( void )
 	// enable alpha test and fog if needed
 	if( gl2wrap_state.alpha_test )
 		SetBits( flags, BIT( GL2_FLAG_ALPHA_TEST ));
-	if( gl2wrap_state.fog )
+	if( gl2wrap_state.fog && !gl2wrap_state.gbuffer_mode )
 		SetBits( flags, BIT( GL2_FLAG_FOG ));
+	if( gl2wrap_state.gbuffer_mode )
+		SetBits( flags, BIT( GL2_FLAG_GBUFFER ));
 
 	// disable all vertex attrib pointers
 	if( !gl2wrap_config.vao_mandatory )
@@ -1638,9 +1643,12 @@ static void GL2_SetupArrays( GLuint start, GLuint end )
 
 	if( gl2wrap_state.alpha_test )
 		SetBits( flags, BIT( GL2_FLAG_ALPHA_TEST ));
-	if( gl2wrap_state.fog )
+	if( gl2wrap_state.fog && !gl2wrap_state.gbuffer_mode )
 		SetBits( flags, BIT( GL2_FLAG_FOG ));
-	prog = GL2_SetProg( flags );// | GL2_ATTR_TEXCOORD0 );
+	if( gl2wrap_state.gbuffer_mode )
+		SetBits( flags, BIT( GL2_FLAG_GBUFFER ));
+
+	prog = GL2_SetProg( flags );
 	if( !prog )
 		return;
 
@@ -1858,8 +1866,6 @@ static void APIENTRY GL2_ActiveTextureARB( GLenum tex )
 static void APIENTRY GL2_ClientActiveTextureARB( GLenum tex )
 {
 	gl2wrap_state.tmu = tex - GL_TEXTURE0_ARB;
-
-	//pglActiveTextureARB( tex );
 }
 
 #define GL2_OVERRIDE_PTR( name ) \
@@ -1985,5 +1991,17 @@ void GL2_ShimInstall( void )
 	GL2_OVERRIDE_PTR_B( BindTexture )
 #endif
 	GL2_AllocArrays();
+}
+
+/*
+================
+GL2_SetGBufferMode
+
+Enable or disable g-buffer rendering mode
+================
+*/
+void GL2_SetGBufferMode( qboolean enable )
+{
+	gl2wrap_state.gbuffer_mode = enable;
 }
 #endif

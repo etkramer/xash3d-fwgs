@@ -996,7 +996,13 @@ void R_RenderScene( void )
 	R_SetupFrustum();
 	R_SetupFrame();
 	R_SetupGL( true );
-	R_Clear( ~0 );
+
+	// Begin deferred rendering: render to g-buffer
+	R_BeginGBufferPass();
+
+	// If deferred not active, clear normally
+	if( !R_DeferredActive() )
+		R_Clear( ~0 );
 
 	R_MarkLeaves();
 	R_DrawFog ();
@@ -1012,6 +1018,10 @@ void R_RenderScene( void )
 	R_DrawEntitiesOnList();
 
 	R_DrawWaterSurfaces();
+
+	// End g-buffer pass and run lighting
+	R_EndGBufferPass();
+	R_DeferredLightingPass();
 
 	R_EndGL();
 }

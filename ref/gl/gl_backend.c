@@ -146,7 +146,8 @@ GL_SelectTexture
 */
 void GL_SelectTexture( int tmu )
 {
-	if( !GL_Support( GL_ARB_MULTITEXTURE ))
+	// In Core Profile, multitexturing is a core feature, not an extension
+	if( !GL_Support( GL_ARB_MULTITEXTURE ) && glConfig.context != CONTEXT_TYPE_GL_CORE )
 		return;
 
 	// don't allow negative texture units
@@ -168,7 +169,9 @@ void GL_SelectTexture( int tmu )
 	{
 		pglActiveTextureARB( tmu + GL_TEXTURE0_ARB );
 
-		if( tmu < glConfig.max_texture_coords )
+		// In Core Profile, always update client active texture for the GL2 shim
+		// (max_texture_coords may be 0 since it's a legacy FFP concept)
+		if( tmu < glConfig.max_texture_coords || glConfig.context == CONTEXT_TYPE_GL_CORE )
 			pglClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
 	}
 }
