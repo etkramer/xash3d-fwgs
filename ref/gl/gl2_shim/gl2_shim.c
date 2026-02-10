@@ -47,15 +47,15 @@ enum gl2wrap_attrib_e
 	GL2_ATTR_COLOR,         // 2
 	GL2_ATTR_TEXCOORD0,     // 4
 	GL2_ATTR_TEXCOORD1,     // 8
+	GL2_ATTR_NORMAL,        // 16
 	GL2_ATTR_MAX
 };
 
 // continuation of previous enum
 enum gl2wrap_flag_e
 {
-	GL2_FLAG_ALPHA_TEST = GL2_ATTR_MAX, // 16
-	GL2_FLAG_FOG,                       // 32
-	GL2_FLAG_NORMAL,                    // 64
+	GL2_FLAG_ALPHA_TEST = GL2_ATTR_MAX, // 32
+	GL2_FLAG_FOG,                       // 64
 	GL2_FLAG_GBUFFER,                   // 128
 	GL2_FLAG_MAX
 };
@@ -124,6 +124,7 @@ static struct
 	GLint end;
 	GLenum prim;
 	GLfloat color[4];
+	GLfloat normal[3];
 	GLfloat fog[4]; // color + density
 	GLfloat alpharef;
 	gl2wrap_prog_t progs[MAX_PROGS];
@@ -173,7 +174,7 @@ static struct
 } gl2wrap_quad;
 #endif
 
-static const int gl2wrap_attr_size[GL2_ATTR_MAX] = { 3, 4, 2, 2 };
+static const int gl2wrap_attr_size[GL2_ATTR_MAX] = { 3, 4, 2, 2, 3 };
 
 static const char *gl2wrap_flag_name[GL2_FLAG_MAX] =
 {
@@ -181,9 +182,9 @@ static const char *gl2wrap_flag_name[GL2_FLAG_MAX] =
 	"ATTR_COLOR",
 	"ATTR_TEXCOORD0",
 	"ATTR_TEXCOORD1",
+	"ATTR_NORMAL",
 	"FEAT_ALPHA_TEST",
 	"FEAT_FOG",
-	"ATTR_NORMAL",
 	"FEAT_GBUFFER",
 };
 
@@ -193,6 +194,7 @@ static const char *gl2wrap_attr_name[GL2_ATTR_MAX] =
 	"inColor",
 	"inTexCoord0",
 	"inTexCoord1",
+	"inNormal",
 };
 
 #define MB( x, y ) (( x ) ? GL_MAP_##y##_BIT : 0 )
@@ -1141,6 +1143,13 @@ static void APIENTRY GL2_Vertex3f( GLfloat x, GLfloat y, GLfloat z )
 		*p++ = gl2wrap.color[2];
 		*p++ = gl2wrap.color[3];
 	}
+	if( FBitSet( gl2wrap.cur_flags, BIT( GL2_ATTR_NORMAL )))
+	{
+		GLfloat *p = gl2wrap.attrbuf[GL2_ATTR_NORMAL] + gl2wrap.end * 3;
+		*p++ = gl2wrap.normal[0];
+		*p++ = gl2wrap.normal[1];
+		*p++ = gl2wrap.normal[2];
+	}
 	++gl2wrap.end;
 
 	if( gl2wrap.prim == GL_QUADS )
@@ -1881,6 +1890,10 @@ static void APIENTRY GL2_ClientActiveTextureARB( GLenum tex )
 
 static void APIENTRY GL2_Normal3fv(const GLfloat *v)
 {
+	gl2wrap.normal[0] = v[0];
+	gl2wrap.normal[1] = v[1];
+	gl2wrap.normal[2] = v[2];
+	SetBits( gl2wrap.cur_flags, BIT( GL2_ATTR_NORMAL ));
 }
 
 static void APIENTRY GL2_Hint(GLenum target, GLenum mode)

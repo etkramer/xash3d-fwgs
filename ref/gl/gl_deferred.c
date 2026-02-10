@@ -37,6 +37,9 @@ static qboolean inGBufferPass = false;
 // Track if deferred rendering is available
 static qboolean deferredAvailable = false;
 
+// Track previous VBO state to restore after g-buffer pass
+static qboolean savedVBOState = false;
+
 // Lighting shader state
 static struct
 {

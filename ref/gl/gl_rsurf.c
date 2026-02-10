@@ -869,15 +869,24 @@ static void R_DrawTriangleOutlines( void )
 DrawGLPoly
 ================
 */
-static void DrawGLPoly( glpoly2_t *p, float xScale, float yScale )
+static void DrawGLPoly( msurface_t *surf, float xScale, float yScale )
 {
+	glpoly2_t	*p = surf ? surf->polys : NULL;
 	float		*v;
 	float		sOffset, sy;
 	float		tOffset, cy;
 	cl_entity_t	*e = RI.currententity;
 	int		i, hasScale = false;
+	vec3_t		normal;
 
 	if( !p ) return;
+
+	// Set face normal for deferred rendering
+	if( FBitSet( surf->flags, SURF_PLANEBACK ))
+		VectorNegate( surf->plane->normal, normal );
+	else
+		VectorCopy( surf->plane->normal, normal );
+	pglNormal3fv( normal );
 
 	if( FBitSet( p->flags, SURF_DRAWTILED ))
 		GL_ResetFogColor();
@@ -1167,7 +1176,7 @@ static void R_RenderFullbrights( void )
 		GL_Bind( XASH_TEXTURE0, i );
 
 		for( p = es; p; p = p->lumachain )
-			DrawGLPoly( p->surf->polys, 0.0f, 0.0f );
+			DrawGLPoly( p->surf, 0.0f, 0.0f );
 
 		fullbright_surfaces[i] = NULL;
 		es->lumachain = NULL;
@@ -1226,7 +1235,7 @@ static void R_RenderDetails( int passes )
 		{
 			fa = p->surf;
 			glt = R_GetTexture( fa->texinfo->texture->gl_texturenum ); // get texture scale
-			DrawGLPoly( fa->polys, glt->xscale, glt->yscale );
+			DrawGLPoly( fa, glt->xscale, glt->yscale );
 		}
 
 		detail_surfaces[i] = NULL;
@@ -1406,7 +1415,7 @@ static void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 
 	R_RenderFullbrightForSurface( fa, t );
 	R_RenderDetailsForSurface( fa, t );
-	DrawGLPoly( fa->polys, 0.0f, 0.0f );
+	DrawGLPoly( fa, 0.0f, 0.0f );
 	R_RenderDecalsForSurface( fa, cull_type );
 	R_RenderLightmapForSurface( fa );
 }

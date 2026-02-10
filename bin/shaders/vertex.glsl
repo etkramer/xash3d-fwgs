@@ -9,7 +9,7 @@ layout(location = LOC_ATTR_TEXCOORD0) in vec2 inTexCoord0;
 layout(location = LOC_ATTR_TEXCOORD1) in vec2 inTexCoord1;
 #endif
 #if ATTR_NORMAL
-in vec3 inNormal;
+layout(location = LOC_ATTR_NORMAL) in vec3 inNormal;
 #endif
 
 #if ATTR_COLOR
