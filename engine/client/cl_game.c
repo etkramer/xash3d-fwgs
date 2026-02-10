@@ -35,6 +35,7 @@ GNU General Public License for more details.
 #include "vgui_draw.h"
 #include "sound.h"		// SND_STOP_LOOPING
 #include "platform/platform.h"
+#include "vid_common.h"
 
 #define MAX_LINELENGTH	80
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channels)
@@ -1704,6 +1705,10 @@ int GAME_EXPORT CL_GetScreenInfo( SCREENINFO *pscrinfo )
 {
 	qboolean apply_scale_factor = false; // we don't want floating point inaccuracies
 	float scale_factor = hud_scale.value;
+	int logical_width = refState.width;
+	int logical_height = refState.height;
+
+	VID_GetLogicalSize( &logical_width, &logical_height );
 
 	if( FBitSet( hud_fontscale.flags, FCVAR_CHANGED ))
 	{
@@ -1719,27 +1724,29 @@ int GAME_EXPORT CL_GetScreenInfo( SCREENINFO *pscrinfo )
 
 	if( hud_scale.value >= 320.0f && hud_scale.value >= hud_scale_minimal_width.value )
 	{
-		scale_factor = refState.width / hud_scale.value;
+		scale_factor = logical_width / hud_scale.value;
 		apply_scale_factor = scale_factor > 1.0f;
 	}
 	else if( scale_factor && scale_factor != 1.0f )
 	{
-		float scaled_width = (float)refState.width / scale_factor;
+		float scaled_width = (float)logical_width / scale_factor;
 		if( scaled_width >= hud_scale_minimal_width.value )
 			apply_scale_factor = true;
 	}
 
 	if( apply_scale_factor )
 	{
-		clgame.scrInfo.iWidth = (float)refState.width / scale_factor;
-		clgame.scrInfo.iHeight = (float)refState.height / scale_factor;
+		clgame.scrInfo.iWidth = (float)logical_width / scale_factor;
+		clgame.scrInfo.iHeight = (float)logical_height / scale_factor;
 		SetBits( clgame.scrInfo.iFlags, SCRINFO_STRETCHED );
 	}
 	else
 	{
-		clgame.scrInfo.iWidth = refState.width;
-		clgame.scrInfo.iHeight = refState.height;
-		ClearBits( clgame.scrInfo.iFlags, SCRINFO_STRETCHED );
+		clgame.scrInfo.iWidth = logical_width;
+		clgame.scrInfo.iHeight = logical_height;
+		if( logical_width != refState.width || logical_height != refState.height )
+			SetBits( clgame.scrInfo.iFlags, SCRINFO_STRETCHED );
+		else ClearBits( clgame.scrInfo.iFlags, SCRINFO_STRETCHED );
 	}
 
 	if( !pscrinfo ) return 0;
@@ -3998,7 +4005,13 @@ qboolean CL_LoadProgs( const char *name )
 	// NOTE: important stuff!
 	// vgui must startup BEFORE loading client.dll to avoid get error ERROR_NOACESS during LoadLibrary
 	if( !try_internal_vgui_support && VGui_LoadProgs( NULL ))
-		VGui_Startup( refState.width, refState.height );
+	{
+		int logical_width = refState.width;
+		int logical_height = refState.height;
+
+		VID_GetLogicalSize( &logical_width, &logical_height );
+		VGui_Startup( logical_width, logical_height );
+	}
 	else
 		try_internal_vgui_support = true; // we failed to load vgui_support, but let's probe client.dll for support anyway
 
@@ -4009,7 +4022,13 @@ qboolean CL_LoadProgs( const char *name )
 
 	// delayed vgui initialization for internal support
 	if( try_internal_vgui_support && VGui_LoadProgs( clgame.hInstance ))
-		VGui_Startup( refState.width, refState.height );
+	{
+		int logical_width = refState.width;
+		int logical_height = refState.height;
+
+		VID_GetLogicalSize( &logical_width, &logical_height );
+		VGui_Startup( logical_width, logical_height );
+	}
 
 	// clear exports
 	ClearExports( cdll_exports, ARRAYSIZE( cdll_exports ));

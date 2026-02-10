@@ -33,6 +33,35 @@ CVAR_DEFINE( vid_height, "vid_height", "0", FCVAR_READ_ONLY, "actual window view
 
 glwstate_t	glw_state;
 
+float VID_GetDPIScale( void )
+{
+	float scale_x = refState.scale_x;
+	float scale_y = refState.scale_y;
+
+	if( scale_x < 1.0f )
+		scale_x = 1.0f;
+	if( scale_y < 1.0f )
+		scale_y = 1.0f;
+
+	return Q_min( scale_x, scale_y );
+}
+
+void VID_GetLogicalSize( int *width, int *height )
+{
+	float scale_x = refState.scale_x;
+	float scale_y = refState.scale_y;
+
+	if( scale_x < 1.0f )
+		scale_x = 1.0f;
+	if( scale_y < 1.0f )
+		scale_y = 1.0f;
+
+	if( width )
+		*width = Q_rint( refState.width / scale_x );
+	if( height )
+		*height = Q_rint( refState.height / scale_y );
+}
+
 /*
 =================
 R_SaveVideoMode

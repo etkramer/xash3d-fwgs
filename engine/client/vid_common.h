@@ -46,5 +46,7 @@ void R_SaveVideoMode( int w, int h, int render_w, int render_h, qboolean maximiz
 void VID_SetDisplayTransform( int *render_w, int *render_h );
 void VID_CheckChanges( void );
 const char *VID_GetModeString( int vid_mode );
+float VID_GetDPIScale( void );
+void VID_GetLogicalSize( int *width, int *height );
 
 #endif // VID_COMMON

@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "vgui_draw.h"
 #include "qfont.h"
 #include "input.h"
+#include "vid_common.h"
 #include "library.h"
 
 CVAR_DEFINE_AUTO( scr_centertime, "2.5", 0, "centerprint hold time" );
@@ -882,8 +883,13 @@ SCR_VidInit
 */
 void SCR_VidInit( void )
 {
+	int logical_width = refState.width;
+	int logical_height = refState.height;
+
 	if( !ref.initialized ) // don't call VidInit too soon
 		return;
+
+	VID_GetLogicalSize( &logical_width, &logical_height );
 
 	memset( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
 	memset( &gameui.ds, 0, sizeof( gameui.ds )); // reset a draw state
@@ -899,7 +905,7 @@ void SCR_VidInit( void )
 	// notify vgui about screen size change
 	if( clgame.hInstance )
 	{
-		VGui_Startup( refState.width, refState.height );
+		VGui_Startup( logical_width, logical_height );
 	}
 
 	CL_ClearSpriteTextures(); // now all hud sprites are invalid

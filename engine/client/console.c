@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "keydefs.h"
 #include "protocol.h"		// get the protocol version
 #include "con_nprint.h"
+#include "vid_common.h"
 #include "qfont.h"
 #include "wadfile.h"
 #include "input.h"
@@ -564,7 +565,7 @@ INTERNAL RESOURCE
 static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 {
 	qboolean success = false;
-	float scale = con_fontscale.value;
+	float scale = con_fontscale.value * VID_GetDPIScale();
 
 	if( font->valid )
 		return; // already loaded
@@ -612,6 +613,9 @@ Con_LoadConchars
 static void Con_LoadConchars( void )
 {
 	int	i, fontSize;
+	int logical_width = refState.width;
+
+	VID_GetLogicalSize( &logical_width, NULL );
 
 	// load all the console fonts
 	for( i = 0; i < CON_NUMFONTS; i++ )
@@ -620,9 +624,9 @@ static void Con_LoadConchars( void )
 	// select properly fontsize
 	if( con_fontnum.value >= 0 && con_fontnum.value <= CON_NUMFONTS - 1 )
 		fontSize = con_fontnum.value;
-	else if( refState.width <= 640 )
+	else if( logical_width <= 640 )
 		fontSize = 0;
-	else if( refState.width >= 1280 )
+	else if( logical_width >= 1280 )
 		fontSize = 2;
 	else fontSize = 1;
 
