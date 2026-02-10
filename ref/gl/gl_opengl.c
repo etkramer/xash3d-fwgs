@@ -217,6 +217,7 @@ static const dllfunc_t texturecompressionfuncs[] =
 { GL_CALL( glGetCompressedTexImage ) },
 };
 
+#if XASH_GLES
 static const dllfunc_t vbofuncs[] =
 {
 { GL_CALL( glBindBufferARB ) },
@@ -229,6 +230,21 @@ static const dllfunc_t vbofuncs[] =
 #endif
 { GL_CALL( glBufferDataARB ) },
 { GL_CALL( glBufferSubDataARB ) },
+};
+#endif
+
+static const dllfunc_t vbofuncs_core[] =
+{
+{ "glBindBuffer", (void **)&pglBindBufferARB },
+{ "glDeleteBuffers", (void **)&pglDeleteBuffersARB },
+{ "glGenBuffers", (void **)&pglGenBuffersARB },
+{ "glIsBuffer", (void **)&pglIsBufferARB },
+#if !XASH_GLES
+{ "glMapBuffer", (void **)&pglMapBufferARB },
+{ "glUnmapBuffer", (void **)&pglUnmapBufferARB },
+#endif
+{ "glBufferData", (void **)&pglBufferDataARB },
+{ "glBufferSubData", (void **)&pglBufferSubDataARB },
 };
 
 static const dllfunc_t multisampletexfuncs[] =
@@ -268,61 +284,6 @@ static const dllfunc_t drawrangeelementsbasevertexfuncs[] =
 static const dllfunc_t bufferstoragefuncs[] =
 {
 { GL_CALL( glBufferStorage ) },
-};
-
-static const dllfunc_t shaderobjectsfuncs[] =
-{
-{ GL_CALL( glDeleteObjectARB ) },
-{ GL_CALL( glGetHandleARB ) },
-{ GL_CALL( glDetachObjectARB ) },
-{ GL_CALL( glCreateShaderObjectARB ) },
-{ GL_CALL( glShaderSourceARB ) },
-{ GL_CALL( glCompileShaderARB ) },
-{ GL_CALL( glCreateProgramObjectARB ) },
-{ GL_CALL( glAttachObjectARB ) },
-{ GL_CALL( glLinkProgramARB ) },
-{ GL_CALL( glUseProgramObjectARB ) },
-{ GL_CALL( glValidateProgramARB ) },
-{ GL_CALL( glUniform1fARB ) },
-{ GL_CALL( glUniform2fARB ) },
-{ GL_CALL( glUniform3fARB ) },
-{ GL_CALL( glUniform4fARB ) },
-{ GL_CALL( glUniform1iARB ) },
-{ GL_CALL( glUniform2iARB ) },
-{ GL_CALL( glUniform3iARB ) },
-{ GL_CALL( glUniform4iARB ) },
-{ GL_CALL( glUniform1fvARB ) },
-{ GL_CALL( glUniform2fvARB ) },
-{ GL_CALL( glUniform3fvARB ) },
-{ GL_CALL( glUniform4fvARB ) },
-{ GL_CALL( glUniform1ivARB ) },
-{ GL_CALL( glUniform2ivARB ) },
-{ GL_CALL( glUniform3ivARB ) },
-{ GL_CALL( glUniform4ivARB ) },
-{ GL_CALL( glUniformMatrix2fvARB ) },
-{ GL_CALL( glUniformMatrix3fvARB ) },
-{ GL_CALL( glUniformMatrix4fvARB ) },
-{ GL_CALL( glGetObjectParameterfvARB ) },
-{ GL_CALL( glGetObjectParameterivARB ) },
-{ GL_CALL( glGetInfoLogARB ) },
-{ GL_CALL( glGetAttachedObjectsARB ) },
-{ GL_CALL( glGetUniformLocationARB ) },
-{ GL_CALL( glGetActiveUniformARB ) },
-{ GL_CALL( glGetUniformfvARB ) },
-{ GL_CALL( glGetUniformivARB ) },
-{ GL_CALL( glGetShaderSourceARB ) },
-{ GL_CALL( glVertexAttribPointerARB ) },
-{ GL_CALL( glEnableVertexAttribArrayARB ) },
-{ GL_CALL( glDisableVertexAttribArrayARB ) },
-{ GL_CALL( glBindAttribLocationARB ) },
-{ GL_CALL( glGetActiveAttribARB ) },
-{ GL_CALL( glGetAttribLocationARB ) },
-{ GL_CALL( glVertexAttrib2fARB ) },
-{ GL_CALL( glVertexAttrib2fvARB ) },
-//{ GL_CALL( glVertexAttrib3fv ) },
-//{ GL_CALL( glVertexAttrib4f ) },
-//{ GL_CALL( glVertexAttrib4fv ) },
-//{ GL_CALL( glVertexAttrib4ubv ) },
 };
 
 /*
@@ -405,6 +366,7 @@ static const dllfunc_t vaofuncs[] =
 { GL_CALL( glIsVertexArray ) },
 };
 
+#if XASH_GLES
 static const dllfunc_t multitexturefuncs_es[] =
 {
 { GL_CALL( glActiveTexture ) },
@@ -418,6 +380,7 @@ static const dllfunc_t multitexturefuncs_es2[] =
 { GL_CALL( glActiveTexture ) },
 { GL_CALL( glActiveTextureARB ) },
 };
+#endif
 
 #endif // !XASH_GL_STATIC
 
@@ -917,7 +880,7 @@ static void GL_InitExtensionsBigGL( void )
 	GL_CheckExtension( "GL_ARB_texture_float", NULL, 0, "gl_texture_float", GL_ARB_TEXTURE_FLOAT_EXT, 0 );
 	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, 0, "gl_texture_depth_float", GL_ARB_DEPTH_FLOAT_EXT, 0 );
 	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, 0, NULL, GL_EXT_GPU_SHADER4, 0 ); // don't confuse users
-	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs, ARRAYSIZE( vbofuncs ), "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
+	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs_core, ARRAYSIZE( vbofuncs_core ), "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
 	GL_CheckExtension( "GL_ARB_texture_multisample", multisampletexfuncs, ARRAYSIZE( multisampletexfuncs ), "gl_texture_multisample", GL_TEXTURE_MULTISAMPLE, 0 );
 	GL_CheckExtension( "GL_ARB_texture_compression_bptc", NULL, 0, "gl_texture_bptc_compression", GL_ARB_TEXTURE_COMPRESSION_BPTC, 0 );
 #if !XASH_GL_STATIC
@@ -1033,7 +996,7 @@ void GL_InitExtensions( void )
 
 			for( i = 0; i < n; i++ )
 			{
-				int l = Q_strncpy( str, pglGetStringi( GL_EXTENSIONS, i ), len );
+				int l = Q_strncpy( str, (const char *)pglGetStringi( GL_EXTENSIONS, i ), len );
 				str += l;
 				*str++ = ' ';
 				len -= l + 1;
@@ -1331,6 +1294,7 @@ void GL_CheckForErrors_( const char *filename, const int fileline )
 		return;
 
 	gEngfuncs.Con_Printf( S_OPENGL_ERROR "%s (at %s:%i)\n", GL_ErrorString( err ), filename, fileline );
+
 }
 
 void GL_SetupAttributes( int safegl )
@@ -1338,10 +1302,18 @@ void GL_SetupAttributes( int safegl )
 	int context_flags = 0; // REFTODO!!!!!
 	int samples = 0;
 
+#if !XASH_GL_STATIC
+	// Core profile is fine when GL2 shim is available to emulate FFP calls.
 	SetBits( context_flags, FCONTEXT_CORE_PROFILE );
 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_CORE );
 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 3 );
 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 2 );
+#else
+	// Static GL builds lack GL2 shim; request compatibility to avoid FFP INVALID_OPERATION spam.
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_COMPATIBILITY );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 2 );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 1 );
+#endif
 
 	if( gEngfuncs.Sys_CheckParm( "-gldebug" ))
 	{

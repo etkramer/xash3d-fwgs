@@ -129,6 +129,7 @@ static struct
 	qboolean alpha_test;
 	qboolean fog;
 	GLuint vbo;
+	GLuint elem_vbo;
 	GLuint tmu;
 } gl2wrap_state;
 
@@ -529,6 +530,65 @@ int GL2_ShimInit( void )
 
 	if( gl2wrap_init )
 		return 0;
+
+	// core contexts may not expose ARB symbols; map them to core names if needed
+	if( !pglBindBufferARB ) pglBindBufferARB = gEngfuncs.GL_GetProcAddress( "glBindBuffer" );
+	if( !pglDeleteBuffersARB ) pglDeleteBuffersARB = gEngfuncs.GL_GetProcAddress( "glDeleteBuffers" );
+	if( !pglGenBuffersARB ) pglGenBuffersARB = gEngfuncs.GL_GetProcAddress( "glGenBuffers" );
+	if( !pglIsBufferARB ) pglIsBufferARB = gEngfuncs.GL_GetProcAddress( "glIsBuffer" );
+	if( !pglMapBufferARB ) pglMapBufferARB = gEngfuncs.GL_GetProcAddress( "glMapBuffer" );
+	if( !pglUnmapBufferARB ) pglUnmapBufferARB = gEngfuncs.GL_GetProcAddress( "glUnmapBuffer" );
+	if( !pglBufferDataARB ) pglBufferDataARB = gEngfuncs.GL_GetProcAddress( "glBufferData" );
+	if( !pglBufferSubDataARB ) pglBufferSubDataARB = gEngfuncs.GL_GetProcAddress( "glBufferSubData" );
+
+	if( !pglCreateShaderObjectARB ) pglCreateShaderObjectARB = gEngfuncs.GL_GetProcAddress( "glCreateShader" );
+	if( !pglShaderSourceARB ) pglShaderSourceARB = gEngfuncs.GL_GetProcAddress( "glShaderSource" );
+	if( !pglCompileShaderARB ) pglCompileShaderARB = gEngfuncs.GL_GetProcAddress( "glCompileShader" );
+	if( !pglGetObjectParameterivARB ) pglGetObjectParameterivARB = gEngfuncs.GL_GetProcAddress( "glGetShaderiv" );
+	if( !pglGetInfoLogARB ) pglGetInfoLogARB = gEngfuncs.GL_GetProcAddress( "glGetShaderInfoLog" );
+	if( !pglCreateProgramObjectARB ) pglCreateProgramObjectARB = gEngfuncs.GL_GetProcAddress( "glCreateProgram" );
+	if( !pglAttachObjectARB ) pglAttachObjectARB = gEngfuncs.GL_GetProcAddress( "glAttachShader" );
+	if( !pglLinkProgramARB ) pglLinkProgramARB = gEngfuncs.GL_GetProcAddress( "glLinkProgram" );
+	if( !pglUseProgramObjectARB ) pglUseProgramObjectARB = gEngfuncs.GL_GetProcAddress( "glUseProgram" );
+	if( !pglValidateProgramARB ) pglValidateProgramARB = gEngfuncs.GL_GetProcAddress( "glValidateProgram" );
+	if( !pglDeleteObjectARB ) pglDeleteObjectARB = gEngfuncs.GL_GetProcAddress( "glDeleteShader" );
+	if( !pglDetachObjectARB ) pglDetachObjectARB = gEngfuncs.GL_GetProcAddress( "glDetachShader" );
+	if( !pglGetUniformLocationARB ) pglGetUniformLocationARB = gEngfuncs.GL_GetProcAddress( "glGetUniformLocation" );
+	if( !pglUniform1fARB ) pglUniform1fARB = gEngfuncs.GL_GetProcAddress( "glUniform1f" );
+	if( !pglUniform2fARB ) pglUniform2fARB = gEngfuncs.GL_GetProcAddress( "glUniform2f" );
+	if( !pglUniform3fARB ) pglUniform3fARB = gEngfuncs.GL_GetProcAddress( "glUniform3f" );
+	if( !pglUniform4fARB ) pglUniform4fARB = gEngfuncs.GL_GetProcAddress( "glUniform4f" );
+	if( !pglUniform1iARB ) pglUniform1iARB = gEngfuncs.GL_GetProcAddress( "glUniform1i" );
+	if( !pglUniform2iARB ) pglUniform2iARB = gEngfuncs.GL_GetProcAddress( "glUniform2i" );
+	if( !pglUniform3iARB ) pglUniform3iARB = gEngfuncs.GL_GetProcAddress( "glUniform3i" );
+	if( !pglUniform4iARB ) pglUniform4iARB = gEngfuncs.GL_GetProcAddress( "glUniform4i" );
+	if( !pglUniform1fvARB ) pglUniform1fvARB = gEngfuncs.GL_GetProcAddress( "glUniform1fv" );
+	if( !pglUniform2fvARB ) pglUniform2fvARB = gEngfuncs.GL_GetProcAddress( "glUniform2fv" );
+	if( !pglUniform3fvARB ) pglUniform3fvARB = gEngfuncs.GL_GetProcAddress( "glUniform3fv" );
+	if( !pglUniform4fvARB ) pglUniform4fvARB = gEngfuncs.GL_GetProcAddress( "glUniform4fv" );
+	if( !pglUniform1ivARB ) pglUniform1ivARB = gEngfuncs.GL_GetProcAddress( "glUniform1iv" );
+	if( !pglUniform2ivARB ) pglUniform2ivARB = gEngfuncs.GL_GetProcAddress( "glUniform2iv" );
+	if( !pglUniform3ivARB ) pglUniform3ivARB = gEngfuncs.GL_GetProcAddress( "glUniform3iv" );
+	if( !pglUniform4ivARB ) pglUniform4ivARB = gEngfuncs.GL_GetProcAddress( "glUniform4iv" );
+	if( !pglUniformMatrix2fvARB ) pglUniformMatrix2fvARB = gEngfuncs.GL_GetProcAddress( "glUniformMatrix2fv" );
+	if( !pglUniformMatrix3fvARB ) pglUniformMatrix3fvARB = gEngfuncs.GL_GetProcAddress( "glUniformMatrix3fv" );
+	if( !pglUniformMatrix4fvARB ) pglUniformMatrix4fvARB = gEngfuncs.GL_GetProcAddress( "glUniformMatrix4fv" );
+	if( !pglGetUniformfvARB ) pglGetUniformfvARB = gEngfuncs.GL_GetProcAddress( "glGetUniformfv" );
+	if( !pglGetUniformivARB ) pglGetUniformivARB = gEngfuncs.GL_GetProcAddress( "glGetUniformiv" );
+	if( !pglGetActiveUniformARB ) pglGetActiveUniformARB = gEngfuncs.GL_GetProcAddress( "glGetActiveUniform" );
+	if( !pglGetShaderSourceARB ) pglGetShaderSourceARB = gEngfuncs.GL_GetProcAddress( "glGetShaderSource" );
+	if( !pglVertexAttribPointerARB ) pglVertexAttribPointerARB = gEngfuncs.GL_GetProcAddress( "glVertexAttribPointer" );
+	if( !pglEnableVertexAttribArrayARB ) pglEnableVertexAttribArrayARB = gEngfuncs.GL_GetProcAddress( "glEnableVertexAttribArray" );
+	if( !pglDisableVertexAttribArrayARB ) pglDisableVertexAttribArrayARB = gEngfuncs.GL_GetProcAddress( "glDisableVertexAttribArray" );
+	if( !pglBindAttribLocationARB ) pglBindAttribLocationARB = gEngfuncs.GL_GetProcAddress( "glBindAttribLocation" );
+	if( !pglGetActiveAttribARB ) pglGetActiveAttribARB = gEngfuncs.GL_GetProcAddress( "glGetActiveAttrib" );
+	if( !pglGetAttribLocationARB ) pglGetAttribLocationARB = gEngfuncs.GL_GetProcAddress( "glGetAttribLocation" );
+	if( !pglVertexAttrib2fARB ) pglVertexAttrib2fARB = gEngfuncs.GL_GetProcAddress( "glVertexAttrib2f" );
+	if( !pglVertexAttrib2fvARB ) pglVertexAttrib2fvARB = gEngfuncs.GL_GetProcAddress( "glVertexAttrib2fv" );
+	if( !pglVertexAttrib3fvARB ) pglVertexAttrib3fvARB = gEngfuncs.GL_GetProcAddress( "glVertexAttrib3fv" );
+	if( !pglGetProgramiv ) pglGetProgramiv = gEngfuncs.GL_GetProcAddress( "glGetProgramiv" );
+	if( !pglDeleteProgram ) pglDeleteProgram = gEngfuncs.GL_GetProcAddress( "glDeleteProgram" );
+	if( !pglGetProgramInfoLog ) pglGetProgramInfoLog = gEngfuncs.GL_GetProcAddress( "glGetProgramInfoLog" );
 
 	if( !pglBindBufferARB )
 	{
@@ -1362,6 +1422,8 @@ static struct
 	void *stream_pointer;
 	size_t stream_counter;
 	GLuint vao_dynamic;
+	GLuint elem_buffer;
+	size_t elem_capacity;
 } gl2wrap_arrays;
 
 static void GL2_SetPointer( int idx, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer )
@@ -1539,6 +1601,8 @@ static void GL2_FreeArrays( void )
 		pglUnmapBufferARB( GL_ARRAY_BUFFER_ARB );
 	}
 	pglDeleteBuffersARB( 1, &gl2wrap_arrays.stream_buffer );
+	if( gl2wrap_arrays.elem_buffer )
+		pglDeleteBuffersARB( 1, &gl2wrap_arrays.elem_buffer );
 	memset( &gl2wrap_arrays, 0, sizeof( gl2wrap_arrays ));
 }
 
@@ -1655,12 +1719,108 @@ static void GL2_SetupArrays( GLuint start, GLuint end )
 
 static void APIENTRY GL2_DrawElements( GLenum mode, GLsizei count, GLenum type, const GLvoid *indices )
 {
+	if( gl2wrap_config.vao_mandatory && gl2wrap_state.elem_vbo == 0 )
+	{
+		size_t index_size = 0;
+
+		switch( type )
+		{
+		case GL_UNSIGNED_BYTE:
+			index_size = 1;
+			break;
+		case GL_UNSIGNED_SHORT:
+			index_size = 2;
+			break;
+		case GL_UNSIGNED_INT:
+			index_size = 4;
+			break;
+		default:
+			index_size = 0;
+			break;
+		}
+
+		if( index_size && indices )
+		{
+			size_t bytes = (size_t)count * index_size;
+
+			GL2_SetupArrays( 0, 0 );
+
+			if( !gl2wrap_arrays.elem_buffer )
+				pglGenBuffersARB( 1, &gl2wrap_arrays.elem_buffer );
+
+			rpglBindBufferARB( GL_ELEMENT_ARRAY_BUFFER_ARB, gl2wrap_arrays.elem_buffer );
+			if( bytes > gl2wrap_arrays.elem_capacity )
+			{
+				pglBufferDataARB( GL_ELEMENT_ARRAY_BUFFER_ARB, bytes, indices, GL_STREAM_DRAW_ARB );
+				gl2wrap_arrays.elem_capacity = bytes;
+			}
+			else
+			{
+				pglBufferSubDataARB( GL_ELEMENT_ARRAY_BUFFER_ARB, 0, bytes, indices );
+			}
+
+			rpglDrawElements( mode, count, type, 0 );
+			rpglBindBufferARB( GL_ELEMENT_ARRAY_BUFFER_ARB, 0 );
+			return;
+		}
+	}
+
 	GL2_SetupArrays( 0, 0 );
 	rpglDrawElements( mode, count, type, indices );
 }
 
 static void APIENTRY GL2_DrawRangeElements( GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices )
 {
+	if( gl2wrap_config.vao_mandatory && gl2wrap_state.elem_vbo == 0 )
+	{
+		size_t index_size = 0;
+
+		switch( type )
+		{
+		case GL_UNSIGNED_BYTE:
+			index_size = 1;
+			break;
+		case GL_UNSIGNED_SHORT:
+			index_size = 2;
+			break;
+		case GL_UNSIGNED_INT:
+			index_size = 4;
+			break;
+		default:
+			index_size = 0;
+			break;
+		}
+
+		if( index_size && indices )
+		{
+			size_t bytes = (size_t)count * index_size;
+
+			GL2_SetupArrays( start, end );
+
+			if( !gl2wrap_arrays.elem_buffer )
+				pglGenBuffersARB( 1, &gl2wrap_arrays.elem_buffer );
+
+			rpglBindBufferARB( GL_ELEMENT_ARRAY_BUFFER_ARB, gl2wrap_arrays.elem_buffer );
+			if( bytes > gl2wrap_arrays.elem_capacity )
+			{
+				pglBufferDataARB( GL_ELEMENT_ARRAY_BUFFER_ARB, bytes, indices, GL_STREAM_DRAW_ARB );
+				gl2wrap_arrays.elem_capacity = bytes;
+			}
+			else
+			{
+				pglBufferSubDataARB( GL_ELEMENT_ARRAY_BUFFER_ARB, 0, bytes, indices );
+			}
+
+			if( rpglDrawRangeElements )
+				rpglDrawRangeElements( mode, start, end, count, type, 0 );
+			else
+				rpglDrawElements( mode, count, type, 0 );
+
+			rpglBindBufferARB( GL_ELEMENT_ARRAY_BUFFER_ARB, 0 );
+			return;
+		}
+	}
+
 	GL2_SetupArrays( start, end );
 	if( rpglDrawRangeElements )
 		rpglDrawRangeElements( mode, start, end, count, type, indices );
@@ -1678,6 +1838,8 @@ static void APIENTRY GL2_BindBufferARB( GLenum buf, GLuint obj )
 {
 	if( buf == GL_ARRAY_BUFFER_ARB )
 		gl2wrap_state.vbo = obj;
+	else if( buf == GL_ELEMENT_ARRAY_BUFFER_ARB )
+		gl2wrap_state.elem_vbo = obj;
 	rpglBindBufferARB( buf, obj );
 }
 
