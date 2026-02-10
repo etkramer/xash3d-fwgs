@@ -372,6 +372,7 @@ static const dllfunc_t fbofuncs[] =
 { GL_CALL( glGenFramebuffers ) },
 { GL_CALL( glCheckFramebufferStatus ) },
 { GL_CALL( glFramebufferTexture2D ) },
+{ GL_CALL( glBlitFramebuffer ) },
 { GL_CALL( glDrawBuffersARB ) },
 };
 

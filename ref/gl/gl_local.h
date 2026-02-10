@@ -543,6 +543,7 @@ void R_ShutdownDeferred( void );
 void R_BeginGBufferPass( void );
 void R_EndGBufferPass( void );
 void R_DeferredLightingPass( void );
+void R_BlitGBufferDepth( void );
 qboolean R_DeferredActive( void );
 
 //

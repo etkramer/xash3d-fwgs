@@ -835,17 +835,20 @@ void R_DrawFog( void )
 
 /*
 =============
-R_DrawEntitiesOnList
+R_DrawOpaqueEntities
+
+Draw only opaque (non-transparent) entities for deferred rendering pass.
+Sprites are excluded as they typically require blending.
 =============
 */
-static void R_DrawEntitiesOnList( void )
+static void R_DrawOpaqueEntities( void )
 {
 	int	i;
 
 	tr.blend = 1.0f;
 	GL_CheckForErrors();
 
-	// first draw solid entities
+	// draw solid entities (no sprites - they use blending)
 	for( i = 0; i < tr.draw_list->num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
 		RI.currententity = tr.draw_list->solid_entities[i];
@@ -871,13 +874,29 @@ static void R_DrawEntitiesOnList( void )
 	}
 
 	GL_CheckForErrors();
+}
 
-	// quake-specific feature
+/*
+=============
+R_DrawTransparentEntities
+
+Draw transparent entities and effects using forward rendering.
+This includes sprites, translucent entities, and various effects.
+=============
+*/
+static void R_DrawTransparentEntities( void )
+{
+	int	i;
+
+	tr.blend = 1.0f;
+	GL_CheckForErrors();
+
+	// quake-specific feature (alpha-tested chains)
 	R_DrawAlphaTextureChains();
 
 	GL_CheckForErrors();
 
-	// draw sprites seperately, because of alpha blending
+	// draw sprites from solid list (they use alpha blending)
 	for( i = 0; i < tr.draw_list->num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
 		RI.currententity = tr.draw_list->solid_entities[i];
@@ -908,7 +927,7 @@ static void R_DrawEntitiesOnList( void )
 
 	GL_CheckForErrors();
 
-	// then draw translucent entities
+	// draw translucent entities
 	for( i = 0; i < tr.draw_list->num_trans_entities && !RI.onlyClientDraw; i++ )
 	{
 		RI.currententity = tr.draw_list->trans_entities[i];
@@ -976,16 +995,22 @@ static void R_DrawEntitiesOnList( void )
 R_RenderScene
 
 R_SetupRefParams must be called right before
+
+Implements a hybrid deferred/forward rendering pipeline:
+1. Deferred pass: Opaque geometry rendered to G-buffer, then lighting applied
+2. Forward pass: Transparent geometry rendered with blending on top
 ================
 */
 void R_RenderScene( void )
 {
+	qboolean deferredActive;
+
 	if( !WORLDMODEL && RI.drawWorld )
 		gEngfuncs.Host_Error( "%s: NULL worldmodel\n", __func__ );
 
 	// frametime is valid only for normal pass
 	if( RP_NORMALPASS( ))
-		tr.frametime = gp_cl->time -   gp_cl->oldtime;
+		tr.frametime = gp_cl->time - gp_cl->oldtime;
 	else tr.frametime = 0.0;
 
 	// begin a new frame
@@ -997,31 +1022,55 @@ void R_RenderScene( void )
 	R_SetupFrame();
 	R_SetupGL( true );
 
-	// Begin deferred rendering: render to g-buffer
+	// Begin deferred rendering: render opaque geometry to g-buffer
 	R_BeginGBufferPass();
 
+	deferredActive = R_DeferredActive();
+
 	// If deferred not active, clear normally
-	if( !R_DeferredActive() )
+	if( !deferredActive )
 		R_Clear( ~0 );
 
 	R_MarkLeaves();
-	R_DrawFog ();
+	R_DrawFog();
+
 	if( RI.drawWorld )
 		R_AnimateRipples();
 
 	R_CheckGLFog();
+
+	// === DEFERRED PASS: Opaque geometry ===
+	// Draw world (opaque surfaces)
 	R_DrawWorld();
 	R_CheckFog();
 
-	gEngfuncs.CL_ExtraUpdate ();	// don't let sound get messed up if going slow
+	gEngfuncs.CL_ExtraUpdate();	// don't let sound get messed up if going slow
 
-	R_DrawEntitiesOnList();
+	// Draw opaque entities (no sprites, no transparent objects)
+	R_DrawOpaqueEntities();
 
-	R_DrawWaterSurfaces();
-
-	// End g-buffer pass and run lighting
+	// End g-buffer pass and run deferred lighting
 	R_EndGBufferPass();
-	R_DeferredLightingPass();
+
+	if( deferredActive )
+	{
+		// Apply deferred lighting to composited g-buffer
+		R_DeferredLightingPass();
+
+		// Copy depth from g-buffer to default framebuffer
+		// so forward-rendered objects can depth test correctly
+		R_BlitGBufferDepth();
+	}
+
+	// === FORWARD PASS: Transparent geometry ===
+	// Everything after this point uses traditional forward rendering
+	// with blending, rendered on top of the deferred lighting result
+
+	// Draw transparent entities (sprites, translucent objects, effects)
+	R_DrawTransparentEntities();
+
+	// Water surfaces are transparent
+	R_DrawWaterSurfaces();
 
 	R_EndGL();
 }

@@ -449,6 +449,33 @@ qboolean R_DeferredActive( void )
 
 /*
 ================
+R_BlitGBufferDepth
+
+Copies the G-buffer depth to the default framebuffer so forward-rendered
+transparent objects can depth test against the deferred geometry.
+================
+*/
+void R_BlitGBufferDepth( void )
+{
+	if( !gbuffer.initialized )
+		return;
+
+	// Blit depth from G-buffer FBO to default framebuffer
+	pglBindFramebuffer( GL_READ_FRAMEBUFFER, gbuffer.fbo );
+	pglBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
+
+	pglBlitFramebuffer(
+		0, 0, gbuffer.width, gbuffer.height,
+		0, 0, gbuffer.width, gbuffer.height,
+		GL_DEPTH_BUFFER_BIT,
+		GL_NEAREST
+	);
+
+	pglBindFramebuffer( GL_FRAMEBUFFER, 0 );
+}
+
+/*
+================
 R_DeferredLightingPass
 
 Renders the fullscreen lighting pass
@@ -492,7 +519,11 @@ void R_DeferredLightingPass( void )
 
 	pglUseProgramObjectARB( 0 );
 
-	// Re-enable depth testing
+	// Restore GL state for forward rendering pass
 	pglDepthMask( GL_TRUE );
 	pglEnable( GL_DEPTH_TEST );
+	pglEnable( GL_CULL_FACE );
+
+	// Restore viewport
+	pglViewport( RI.viewport[0], RI.viewport[1], RI.viewport[2], RI.viewport[3] );
 }
