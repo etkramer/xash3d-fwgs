@@ -279,9 +279,6 @@ qboolean R_Init_Video( ref_graphic_apis_t type )
 
 	switch( type )
 	{
-	case REF_SOFTWARE:
-		glw_state.software = true;
-		break;
 	case REF_GL:
 	{
 		string safe;
@@ -308,8 +305,6 @@ qboolean R_Init_Video( ref_graphic_apis_t type )
 
 	switch( type )
 	{
-	case REF_SOFTWARE:
-		break;
 	case REF_GL:
 		ref.dllFuncs.GL_InitExtensions();
 		break;

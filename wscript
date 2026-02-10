@@ -88,12 +88,7 @@ SUBDIRS = [
 
 	# disable only by engine feature, makes no sense to even parse subprojects in dedicated mode
 	Subproject('3rdparty/extras',       lambda x: x.env.CLIENT and x.env.DEST_OS != 'android'),
-	Subproject('3rdparty/nanogl',       lambda x: x.env.CLIENT and x.env.NANOGL),
-	Subproject('3rdparty/gl-wes-v2',    lambda x: x.env.CLIENT and x.env.GLWES),
-	Subproject('3rdparty/gl4es',        lambda x: x.env.CLIENT and x.env.GL4ES),
-	Subproject('ref/gl',                lambda x: x.env.CLIENT and (x.env.GL or x.env.NANOGL or x.env.GLWES or x.env.GL4ES or x.env.GLES3COMPAT)),
-	Subproject('ref/soft',              lambda x: x.env.CLIENT and x.env.SOFT),
-	Subproject('ref/null',              lambda x: x.env.CLIENT and x.env.NULL),
+	Subproject('ref/gl',                lambda x: x.env.CLIENT and x.env.GL),
 	Subproject('3rdparty/bzip2',        lambda x: x.env.CLIENT and not x.env.HAVE_SYSTEM_BZ2),
 	Subproject('3rdparty/opus',         lambda x: x.env.CLIENT and not x.env.HAVE_SYSTEM_OPUS),
 	Subproject('3rdparty/libogg',       lambda x: x.env.CLIENT and not x.env.HAVE_SYSTEM_OGG),
@@ -118,13 +113,7 @@ SUBDIRS = [
 ]
 
 REFDLLS = [
-	RefDll('soft', True),
 	RefDll('gl', True),
-	RefDll('gles1', False, 'NANOGL'),
-	RefDll('gles2', False, 'GLWES'),
-	RefDll('gl4es', False),
-	RefDll('gles3compat', False, 'GLES3COMPAT'),
-	RefDll('null', False),
 ]
 
 def options(opt):
@@ -177,9 +166,6 @@ def options(opt):
 	grp.add_option('--enable-wafcache', action='store_true', dest='WAFCACHE', default=False, help='')
 
 	grp = opt.add_option_group('Renderers options')
-
-	grp.add_option('--enable-all-renderers', action='store_true', dest='ALL_RENDERERS', default=False,
-		help = 'enable all renderers supported by Xash3D FWGS [default: %(default)s]')
 
 	for dll in REFDLLS:
 		dll.register_option(grp)
@@ -245,26 +231,13 @@ def configure(conf):
 		conf.env.CONSOLE_SUBSYSTEM += ',5.01'
 
 	# Set default options for some platforms
-	if conf.env.DEST_OS == 'android':
-		conf.options.NANOGL           = True
-		conf.options.GLWES            = False # deprecated
-		conf.options.GL4ES            = True
-		conf.options.GLES3COMPAT      = True
-		conf.options.GL               = False
-	elif conf.env.IOS:
-		conf.options.NANOGL           = True
-		conf.options.GLWES            = False # deprecated
-		conf.options.GL4ES            = False # doesn't compile on ios yet
-		conf.options.GLES3COMPAT      = True
-		conf.options.GL               = False
-	elif conf.env.MAGX:
+	if conf.env.MAGX:
 		conf.options.SDL12            = True
 		conf.options.GL               = False
 		conf.options.LOW_MEMORY       = 1
 		enforce_pic = False
 	elif conf.env.DEST_OS == 'emscripten':
 		conf.options.BUILD_BUNDLED_DEPS = True
-		conf.options.GLES3COMPAT      = True
 		conf.options.GL               = False
 
 	# psvita needs -fPIC set manually and static builds are incompatible with -fPIC
@@ -441,7 +414,7 @@ def configure(conf):
 	setattr(conf, 'refdlls', REFDLLS)
 
 	for refdll in REFDLLS:
-		refdll.register_env(conf.env, conf.options, conf.options.ALL_RENDERERS)
+		refdll.register_env(conf.env, conf.options, False)
 
 	conf.env.GAMEDIR = conf.options.GAMEDIR
 	conf.define('XASH_GAMEDIR', conf.options.GAMEDIR)

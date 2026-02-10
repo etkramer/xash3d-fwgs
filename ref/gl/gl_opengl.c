@@ -1,9 +1,5 @@
 
 #include "gl_local.h"
-#if XASH_GL4ES
-#include "gl4es/include/gl4esinit.h"
-#include "gl4es/include/gl4eshint.h"
-#endif // XASH_GL4ES
 
 CVAR_DEFINE( gl_extensions, "gl_allow_extensions", "1", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "allow gl_extensions" );
 CVAR_DEFINE( gl_texture_anisotropy, "gl_anisotropy", "8", FCVAR_GLCONFIG, "textures anisotropic filter" );
@@ -683,23 +679,6 @@ static void R_RenderInfo( qboolean startup )
 	// don't spam about extensions
 	gEngfuncs.Con_Reportf( "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
 
-	if( glConfig.wrapper == GLES_WRAPPER_GL4ES )
-	{
-		const char *vendor = (const char *)pglGetString( GL_VENDOR | 0x10000 );
-		const char *renderer = (const char *)pglGetString( GL_RENDERER | 0x10000 );
-		const char *version = (const char *)pglGetString( GL_VERSION | 0x10000 );
-		const char *extensions = (const char *)pglGetString( GL_EXTENSIONS | 0x10000 );
-
-		if( vendor )
-			gEngfuncs.Con_Printf( "GL4ES_VENDOR: %s\n", vendor );
-		if( renderer )
-			gEngfuncs.Con_Printf( "GL4ES_RENDERER: %s\n", renderer );
-		if( version )
-			gEngfuncs.Con_Printf( "GL4ES_VERSION: %s\n", version );
-		if( extensions )
-			gEngfuncs.Con_Reportf( "GL4ES_EXTENSIONS: %s\n", extensions );
-	}
-
 	gEngfuncs.Con_Printf( "GL_MAX_TEXTURE_SIZE: %i\n", glConfig.max_2d_texture_size );
 
 	if( GL_Support( GL_ARB_MULTITEXTURE ))
@@ -860,7 +839,7 @@ static void GL_InitExtensionsGLES( void )
 static void GL_InitExtensionsBigGL( void )
 {
 	// intialize wrapper type
-	glConfig.context = gEngfuncs.Sys_CheckParm( "-glcore" )? CONTEXT_TYPE_GL_CORE : CONTEXT_TYPE_GL;
+	glConfig.context = CONTEXT_TYPE_GL_CORE;
 	glConfig.wrapper = GLES_WRAPPER_NONE;
 
 	if( Q_stristr( glConfig.renderer_string, "geforce" ))
@@ -878,10 +857,6 @@ static void GL_InitExtensionsBigGL( void )
 	else if( Q_stristr( glConfig.renderer_string, "intel" ))
 		glConfig.hardware_type = GLHW_INTEL;
 	else glConfig.hardware_type = GLHW_GENERIC;
-
-	// gl4es may be used system-wide
-	if( Q_stristr( glConfig.renderer_string, "gl4es" ))
-		glConfig.wrapper = GLES_WRAPPER_GL4ES;
 
 	// multitexture
 	glConfig.max_texture_units = glConfig.max_texture_coords = glConfig.max_teximage_units = 1;
@@ -946,10 +921,7 @@ static void GL_InitExtensionsBigGL( void )
 	GL_CheckExtension( "GL_ARB_texture_multisample", multisampletexfuncs, ARRAYSIZE( multisampletexfuncs ), "gl_texture_multisample", GL_TEXTURE_MULTISAMPLE, 0 );
 	GL_CheckExtension( "GL_ARB_texture_compression_bptc", NULL, 0, "gl_texture_bptc_compression", GL_ARB_TEXTURE_COMPRESSION_BPTC, 0 );
 #if !XASH_GL_STATIC
-	if( glConfig.context == CONTEXT_TYPE_GL_CORE )
-		GL_CheckExtension( "shader_objects", shaderobjectsfuncs_gles, ARRAYSIZE( shaderobjectsfuncs_gles ), "gl_shaderobjects", GL_SHADER_OBJECTS_EXT, 2.0 );
-	else
-		GL_CheckExtension( "GL_ARB_shader_objects", shaderobjectsfuncs, ARRAYSIZE( shaderobjectsfuncs ), "gl_shaderobjects", GL_SHADER_OBJECTS_EXT, 2.0 );
+	GL_CheckExtension( "shader_objects", shaderobjectsfuncs_gles, ARRAYSIZE( shaderobjectsfuncs_gles ), "gl_shaderobjects", GL_SHADER_OBJECTS_EXT, 2.0 );
 	GL_CheckExtension( "GL_ARB_vertex_array_object", vaofuncs, ARRAYSIZE( vaofuncs ), "gl_vertex_array_object", GL_ARB_VERTEX_ARRAY_OBJECT_EXT, 3.0 );
 	GL_CheckExtension( "GL_ARB_buffer_storage", bufferstoragefuncs, ARRAYSIZE( bufferstoragefuncs ), "gl_buffer_storage", GL_BUFFER_STORAGE_EXT, 4.4);
 	GL_CheckExtension( "GL_ARB_map_buffer_range", mapbufferrangefuncs, ARRAYSIZE( mapbufferrangefuncs ), "gl_map_buffer_range", GL_MAP_BUFFER_RANGE_EXT , 3.0);
@@ -999,9 +971,8 @@ static void GL_InitExtensionsBigGL( void )
 	// init our immediate mode override
 	VGL_ShimInit();
 #endif
-#if !XASH_GLES && !XASH_GL_STATIC
-	if( gEngfuncs.Sys_CheckParm( "-gl2shim" ))
-		GL2_ShimInit();
+#if !XASH_GLES
+	GL2_ShimInit();
 #endif
 }
 #endif
@@ -1367,42 +1338,10 @@ void GL_SetupAttributes( int safegl )
 	int context_flags = 0; // REFTODO!!!!!
 	int samples = 0;
 
-#if XASH_GLES
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_ES );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_EGL, 1 );
-#if XASH_NANOGL
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 1 );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 1 );
-#else // !XASH_NANOGL
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 2 );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 0 );
-#endif
-
-#elif XASH_GL4ES
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_ES );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_EGL, 1 );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 2 );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 0 );
-#else // GL1.x
-	if( gEngfuncs.Sys_CheckParm( "-glcore" ))
-	{
-		SetBits( context_flags, FCONTEXT_CORE_PROFILE );
-
-		gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_CORE );
-		gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 3 );
-		gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 3 );
-	}
-	else
-	{
-		if( !safegl )
-			gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_COMPATIBILITY );
-		else
-		{
-			gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 1 );
-			gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 1 );
-		}
-	}
-#endif // XASH_GLES
+	SetBits( context_flags, FCONTEXT_CORE_PROFILE );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_CORE );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 3 );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 2 );
 
 	if( gEngfuncs.Sys_CheckParm( "-gldebug" ))
 	{

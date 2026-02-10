@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$SCRIPT_DIR"
 BIN_DIR="$ROOT_DIR/bin"
 
 cd "$ROOT_DIR"

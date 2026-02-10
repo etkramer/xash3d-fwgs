@@ -39,8 +39,6 @@ CVAR_DEFINE_AUTO( r_decals, "4096", FCVAR_ARCHIVE, "sets the maximum number of d
 CVAR_DEFINE_AUTO( gl_msaa_samples, "0", FCVAR_GLCONFIG, "samples number for multisample anti-aliasing" );
 CVAR_DEFINE_AUTO( gl_clear, "0", FCVAR_ARCHIVE, "clearing screen after each frame" );
 CVAR_DEFINE_AUTO( r_showtree, "0", FCVAR_ARCHIVE, "build the graph of visible BSP tree" );
-static CVAR_DEFINE_AUTO( r_refdll, "", FCVAR_RENDERINFO, "choose renderer implementation, if supported" );
-static CVAR_DEFINE_AUTO( r_refdll_loaded, "", FCVAR_READ_ONLY, "currently loaded renderer" );
 static CVAR_DEFINE_AUTO( r_pvs_radius, "0.1", FCVAR_ARCHIVE, "increase amount of potentially visible leaves by this radius" );
 
 // there is no need to expose whole host and cl structs into the renderer
@@ -620,7 +618,6 @@ static qboolean R_LoadRenderer( const char *refopt, qboolean quiet )
 		return false;
 	}
 
-	Cvar_FullSet( "r_refdll_loaded", refopt, FCVAR_READ_ONLY );
 	Con_Reportf( "Renderer %s initialized\n", refdll );
 
 	return true;
@@ -657,47 +654,13 @@ static void R_CollectRendererNames( void )
 	// ordering is important!
 	static const char *short_names[] =
 	{
-#if XASH_REF_GL_ENABLED
 		"gl",
-#endif
-#if XASH_REF_NANOGL_ENABLED
-		"gles1",
-#endif
-#if XASH_REF_GLWES_ENABLED
-		"gles2",
-#endif
-#if XASH_REF_GL4ES_ENABLED
-		"gl4es",
-#endif
-#if XASH_REF_GLES3COMPAT_ENABLED
-		"gles3compat",
-#endif
-#if XASH_REF_SOFT_ENABLED
-		"soft",
-#endif
 	};
 
 	// ordering is important here too!
 	static const char *long_names[ARRAYSIZE( short_names )] =
 	{
-#if XASH_REF_GL_ENABLED
-		"OpenGL",
-#endif
-#if XASH_REF_NANOGL_ENABLED
-		"GLES1 (NanoGL)",
-#endif
-#if XASH_REF_GLWES_ENABLED
-		"GLES2 (gl-wes-v2)",
-#endif
-#if XASH_REF_GL4ES_ENABLED
-		"GL4ES",
-#endif
-#if XASH_REF_GLES3COMPAT_ENABLED
-		"GLES3 (gl2_shim)",
-#endif
-#if XASH_REF_SOFT_ENABLED
-		"Software",
-#endif
+		"OpenGL Core",
 	};
 
 	ref.num_renderers = ARRAYSIZE( short_names );
@@ -708,8 +671,6 @@ static void R_CollectRendererNames( void )
 qboolean R_Init( void )
 {
 	qboolean success = false;
-	string requested_cmdline;
-	string requested_cvar;
 
 	Cvar_RegisterVariable( &gl_vsync );
 	Cvar_RegisterVariable( &r_showtextures );
@@ -718,8 +679,6 @@ qboolean R_Init( void )
 	Cvar_RegisterVariable( &gl_msaa_samples );
 	Cvar_RegisterVariable( &gl_clear );
 	Cvar_RegisterVariable( &r_showtree );
-	Cvar_RegisterVariable( &r_refdll );
-	Cvar_RegisterVariable( &r_refdll_loaded );
 	Cvar_RegisterVariable( &r_pvs_radius );
 
 	// cvars that are expected to exist
@@ -756,54 +715,7 @@ qboolean R_Init( void )
 
 	R_CollectRendererNames();
 
-	// Priority:
-	// 1. Command line `-ref` argument.
-	// 2. `ref_dll` cvar.
-	// 3. Detected renderers in `DEFAULT_RENDERERS` order.
-	requested_cmdline[0] = 0;
-	requested_cvar[0] = 0;
-
-	if( Sys_GetParmFromCmdLine( "-ref", requested_cmdline ))
-		success = R_LoadRenderer( requested_cmdline, false );
-
-	if( !success && COM_CheckString( r_refdll.string ) && Q_stricmp( requested_cmdline, r_refdll.string ))
-	{
-		Q_strncpy( requested_cvar, r_refdll.string, sizeof( requested_cvar ));
-
-		// do not show scary messages to user if renderer set in config cannot be loaded
-		// as game data could be copied from one platform to another, where this renderer
-		// might not be supported (ref_gl on Android for example)
-		success = R_LoadRenderer( requested_cvar, !host_developer.value );
-	}
-
-	if( !success )
-	{
-		int i;
-
-		for( i = 0; i < ref.num_renderers; i++ )
-		{
-			// skip renderer that was requested but failed to load
-			if( !Q_strcmp( requested_cmdline, ref.short_names[i] ))
-				continue;
-
-			if( !Q_strcmp( requested_cvar, ref.short_names[i] ))
-				continue;
-
-			// do not show bruteforcing attempts, however, warn user about falling back
-			// to software mode
-			if( !Q_strcmp( "soft", ref.short_names[i] ) && !host_developer.value )
-				Sys_Warn( "Can't initialize any hardware accelerated renderer. Falling back to software rendering...\n" );
-
-			success = R_LoadRenderer( ref.short_names[i], !host_developer.value );
-
-			if( success )
-			{
-				// remember last valid renderer
-				Cvar_DirectSet( &r_refdll, ref.short_names[i] );
-				break;
-			}
-		}
-	}
+	success = R_LoadRenderer( "gl", false );
 
 	if( !success )
 	{

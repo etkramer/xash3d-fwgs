@@ -86,7 +86,6 @@ touch video.cfg
 echo 'fullscreen "1"' >> video.cfg
 echo 'width "960"'    >> video.cfg
 echo 'height "544"'   >> video.cfg
-echo 'r_refdll "gl"'  >> video.cfg
 
 touch opengl.cfg
 echo 'gl_nosort "1"'  >> opengl.cfg

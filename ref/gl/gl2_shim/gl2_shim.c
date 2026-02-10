@@ -1793,7 +1793,7 @@ void GL2_ShimInstall( void )
 	GL2_OVERRIDE_PTR( DepthRange )
 	GL2_OVERRIDE_PTR( DrawBuffer )
 #endif
-	if( glConfig.context != CONTEXT_TYPE_GL )
+	if( glConfig.context == CONTEXT_TYPE_GL_CORE )
 	{
 		GL2_OVERRIDE_PTR_B( TexImage2D )
 		GL2_OVERRIDE_PTR_B( TexParameteri )

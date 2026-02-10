@@ -57,13 +57,12 @@ GNU General Public License for more details.
 #define PARM_REBUILD_GAMMA	31	// if true lightmaps rebuilding for gamma change
 #define PARM_DEDICATED_SERVER	32
 #define PARM_SURF_SAMPLESIZE	33	// lightmap resolution per face (second arg interpret as facenumber)
-#define PARM_GL_CONTEXT_TYPE	34	// opengl or opengles
-#define PARM_GLES_WRAPPER	35	//
-#define PARM_STENCIL_ACTIVE	36
-#define PARM_WATER_ALPHA	37
-#define PARM_TEX_MEMORY	38	// returns total memory of uploaded texture in bytes
-#define PARM_DELUXEDATA	39	// nasty hack, convert int to pointer
-#define PARM_SHADOWDATA	40	// nasty hack, convert int to pointer
+#define PARM_GL_CONTEXT_TYPE	34	// core OpenGL context
+#define PARM_STENCIL_ACTIVE	35
+#define PARM_WATER_ALPHA	36
+#define PARM_TEX_MEMORY	37	// returns total memory of uploaded texture in bytes
+#define PARM_DELUXEDATA	38	// nasty hack, convert int to pointer
+#define PARM_SHADOWDATA	39	// nasty hack, convert int to pointer
 
 // skybox ordering
 enum
@@ -114,18 +113,12 @@ typedef enum
 
 typedef enum
 {
-	CONTEXT_TYPE_GL = 0, // compatibility profile
-	CONTEXT_TYPE_GLES_1_X,
-	CONTEXT_TYPE_GLES_2_X,
-	CONTEXT_TYPE_GL_CORE
+	CONTEXT_TYPE_GL_CORE = 0
 } gl_context_type_t;
 
 typedef enum
 {
-	GLES_WRAPPER_NONE = 0,		// native GL
-	GLES_WRAPPER_NANOGL,		// used on GLES platforms
-	GLES_WRAPPER_WES,		// used on GLES platforms
-	GLES_WRAPPER_GL4ES,		// used on GLES platforms
+	GLES_WRAPPER_NONE = 0
 } gles_wrapper_t;
 
 // 30 bytes here

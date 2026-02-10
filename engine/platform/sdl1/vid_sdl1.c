@@ -45,7 +45,7 @@ qboolean SW_CreateBuffer( int width, int height, uint *stride, uint *bpp, uint *
 	sw.win = SDL_GetVideoSurface();
 
 	// sdl will create renderer if hw framebuffer unavailiable, so cannot fallback here
-	// if it is failed, it is not possible to draw with SDL in REF_SOFTWARE mode
+	// if it is failed, it is not possible to draw with SDL in software output mode
 	if( !sw.win )
 	{
 		Sys_Warn( "failed to initialize software output, try running with -glblit flag" );
@@ -386,9 +386,6 @@ qboolean R_Init_Video( ref_graphic_apis_t type )
 
 	switch( type )
 	{
-	case REF_SOFTWARE:
-		glw_state.software = true;
-		break;
 	case REF_GL:
 		if( !glw_state.safe && Sys_GetParmFromCmdLine( "-safegl", safe ) )
 			glw_state.safe = bound( SAFE_NO, Q_atoi( safe ), SAFE_DONTCARE );
@@ -418,7 +415,6 @@ qboolean R_Init_Video( ref_graphic_apis_t type )
 		// refdll also can check extensions
 		ref.dllFuncs.GL_InitExtensions();
 		break;
-	case REF_SOFTWARE:
 	default:
 		break;
 	}

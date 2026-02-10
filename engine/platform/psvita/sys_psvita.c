@@ -171,7 +171,7 @@ void PSVita_Init( void )
 	}
 
 	// init vitaGL, leaving some memory for DLL mapping
-	// TODO: we don't need to do this for ref_soft
+	// TODO: this is not needed for core OpenGL builds
 	vglUseVram( GL_TRUE );
 	vglUseExtraMem( GL_TRUE );
 	vglInitExtended( 0, 960, 544, VGL_MEM_THRESHOLD, 0 );

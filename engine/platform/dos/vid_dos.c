@@ -51,19 +51,9 @@ static void DOS_GetScreenRes( int *x, int *y )
 
 qboolean R_Init_Video( ref_graphic_apis_t type )
 {
-	qboolean retval;
-
-	if( type != REF_SOFTWARE )
-		return false; /// glide???
-
-	if( !(retval = VID_SetMode()) )
-	{
-		return retval;
-	}
-
-	host.renderinfo_changed = false;
-
-	return true;
+	(void)type;
+	Con_Reportf( S_ERROR "%s: DOS video backend does not support core OpenGL\n", __func__ );
+	return false;
 }
 
 void R_Free_Video( void )

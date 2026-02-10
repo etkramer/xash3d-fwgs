@@ -2,7 +2,7 @@
 
 Before start, I would recommend you to compile and run engine for already supported and well-spread platform, such as GNU/Linux or Windows. Hack it, get familiar with engine.
 
-One beauties of Xash3D FWGS Engine is it modularity, so game logic, UI and renderers are located in platform-independent libraries. Every library is loaded at run time and may or may be not optional.  For example, if your platform doesn't have OpenGL of any kind, you can skip it and use our software renderer! Of course, there is no real reason to run game engine, if you don't have game logic of any kind, so the minimal build of Xash3D FWGS is headless dedicated server.
+One beauties of Xash3D FWGS Engine is it modularity, so game logic, UI and renderers are located in platform-independent libraries. Every library is loaded at run time and may or may be not optional. The current renderer target is OpenGL Core (3.2+), so platforms need a core OpenGL context to run the client. Of course, there is no real reason to run game engine, if you don't have game logic of any kind, so the minimal build of Xash3D FWGS is headless dedicated server.
 
 Historically, Xash3D Engine was even more modular(see github.com/a1batross/Xash3D_ancient), but we thought that to fulfill our crossplatform needs we will keep all platform-specific stuff in the engine itself and libraries must import or expose platform-independent APIs.
 

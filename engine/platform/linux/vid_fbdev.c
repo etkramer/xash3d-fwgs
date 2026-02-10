@@ -52,36 +52,9 @@ void FB_GetScreenRes( int *x, int *y )
 
 qboolean R_Init_Video( ref_graphic_apis_t type )
 {
-	qboolean retval;
-	string fbdev = DEFAULT_FBDEV;
-	fb.fd = -1;
-
-	if( type != REF_SOFTWARE )
-		return false;
-
-	Sys_GetParmFromCmdLine( "-fbdev", fbdev );
-
-	fb.fd = open( fbdev, O_RDWR );
-
-	if( fb.fd < 0 )
-	{
-		Con_Printf( S_ERROR "failed to open framebuffer device: %s\n", strerror(errno));
-	}
-
-	if( Sys_CheckParm( "-ttygfx" ) )
-		fb.tty_fd = open( "/dev/tty", O_RDWR ); // only need this to set graphics mode, optional
-
-	ioctl(fb.fd, FBIOGET_FSCREENINFO, &fb.finfo);
-	ioctl(fb.fd, FBIOGET_VSCREENINFO, &fb.vinfo);
-
-	if( !(retval = VID_SetMode()) )
-	{
-		return retval;
-	}
-
-	host.renderinfo_changed = false;
-
-	return true;
+	(void)type;
+	Con_Reportf( S_ERROR "%s: framebuffer backend does not support core OpenGL\n", __func__ );
+	return false;
 }
 
 void R_Free_Video( void )

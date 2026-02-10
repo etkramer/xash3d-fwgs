@@ -235,8 +235,6 @@ static int GL_RefGetParm( int parm, int arg )
 		return glConfig.softwareGammaUpdate;
 	case PARM_GL_CONTEXT_TYPE:
 		return glConfig.context;
-	case PARM_GLES_WRAPPER:
-		return glConfig.wrapper;
 	case PARM_STENCIL_ACTIVE:
 		return glState.stencilEnabled;
 	case PARM_TEX_FILTERING:
