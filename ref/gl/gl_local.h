@@ -36,9 +36,7 @@ GNU General Public License for more details.
 #include "wadfile.h"
 #include "common/mod_local.h"
 
-#if !defined(XASH_GL_STATIC)
 #include "gl2_shim/gl2_shim.h"
-#endif
 
 #ifndef offsetof
 #ifdef __GNUC__

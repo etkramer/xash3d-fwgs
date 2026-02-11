@@ -165,14 +165,14 @@ void GL_SelectTexture( int tmu )
 
 	glState.activeTMU = tmu;
 
-	if( pglActiveTextureARB )
+	if( pglActiveTexture )
 	{
-		pglActiveTextureARB( tmu + GL_TEXTURE0_ARB );
+		pglActiveTexture( tmu + GL_TEXTURE0_ARB );
 
 		// In Core Profile, always update client active texture for the GL2 shim
 		// (max_texture_coords may be 0 since it's a legacy FFP concept)
 		if( tmu < glConfig.max_texture_coords || glConfig.context == CONTEXT_TYPE_GL_CORE )
-			pglClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
+			pglClientActiveTexture( tmu + GL_TEXTURE0_ARB );
 	}
 }
 

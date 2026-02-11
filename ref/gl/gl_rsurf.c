@@ -2186,9 +2186,9 @@ void R_GenerateVBO( void )
 				if( len + surf->polys->numverts > VBOINDEX_MAX )
 				{
 					// upload last generated array
-					pglGenBuffersARB( 1, &vbo->glindex );
-					pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
-					pglBufferDataARB( GL_ARRAY_BUFFER_ARB, vbo->array_len * sizeof( vbovertex_t ), vbo->array, GL_STATIC_DRAW_ARB );
+					pglGenBuffers( 1, &vbo->glindex );
+					pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+					pglBufferData( GL_ARRAY_BUFFER_ARB, vbo->array_len * sizeof( vbovertex_t ), vbo->array, GL_STATIC_DRAW_ARB );
 
 					Assert( len == vbo->array_len );
 
@@ -2239,14 +2239,14 @@ void R_GenerateVBO( void )
 	Assert( len == vbo->array_len );
 
 	// upload last array
-	pglGenBuffersARB( 1, &vbo->glindex );
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
-	pglBufferDataARB( GL_ARRAY_BUFFER_ARB, vbo->array_len * sizeof( vbovertex_t ), vbo->array, GL_STATIC_DRAW_ARB );
+	pglGenBuffers( 1, &vbo->glindex );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+	pglBufferData( GL_ARRAY_BUFFER_ARB, vbo->array_len * sizeof( vbovertex_t ), vbo->array, GL_STATIC_DRAW_ARB );
 
 	// prepare decal array
-	pglGenBuffersARB( 1, &vbos.decaldata->decalvbo );
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
-	pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * DECAL_VERTS_CUT * MAX_RENDER_DECALS, vbos.decaldata->decalarray, GL_DYNAMIC_DRAW_ARB );
+	pglGenBuffers( 1, &vbos.decaldata->decalvbo );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
+	pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * DECAL_VERTS_CUT * MAX_RENDER_DECALS, vbos.decaldata->decalarray, GL_DYNAMIC_DRAW_ARB );
 
 	// preallocate dlight arrays
 	vbos.dlight_index = Mem_Calloc( vbos.mempool, maxindex * sizeof( *vbos.dlight_index ) * 6 );
@@ -2256,17 +2256,17 @@ void R_GenerateVBO( void )
 
 	if( r_vbo_dlightmode.value )
 	{
-		pglGenBuffersARB( 1, &vbos.dlight_vbo );
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t ) * (int)( vbos.arraylist->next ? VBOINDEX_MAX + 1 : vbos.arraylist->array_len + 1 ), NULL, GL_STREAM_DRAW_ARB );
-		pglGenBuffersARB( 1, &vbos.decal_dlight_vbo );
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
+		pglGenBuffers( 1, &vbos.dlight_vbo );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t ) * (int)( vbos.arraylist->next ? VBOINDEX_MAX + 1 : vbos.arraylist->array_len + 1 ), NULL, GL_STREAM_DRAW_ARB );
+		pglGenBuffers( 1, &vbos.decal_dlight_vbo );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
 	}
 
 
 	// reset state
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
 	mtst.tmu_gl = XASH_TEXTURE0;
 
 	t3 = gEngfuncs.pfnTime();
@@ -2302,9 +2302,9 @@ void R_AddDecalVBO( decal_t *pdecal, msurface_t *surf )
 	for( i = 0; i < numVerts; i++ )
 		memcpy( &vbos.decaldata->decalarray[decalindex * DECAL_VERTS_CUT + i], v + i * VERTEXSIZE, VERTEXSIZE * 4 );
 
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
-	pglBufferSubDataARB( GL_ARRAY_BUFFER_ARB, decalindex * sizeof( vbovertex_t ) * DECAL_VERTS_CUT, sizeof( vbovertex_t ) * numVerts, &vbos.decaldata->decalarray[decalindex * DECAL_VERTS_CUT] );
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
+	pglBufferSubData( GL_ARRAY_BUFFER_ARB, decalindex * sizeof( vbovertex_t ) * DECAL_VERTS_CUT, sizeof( vbovertex_t ) * numVerts, &vbos.decaldata->decalarray[decalindex * DECAL_VERTS_CUT] );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
 
 	vbos.decaldata->decals[decalindex].numVerts = numVerts;
 }
@@ -2321,18 +2321,18 @@ void R_ClearVBO( void )
 	vboarray_t *vbo;
 
 	for( vbo = vbos.arraylist; vbo; vbo = vbo->next )
-		pglDeleteBuffersARB( 1, &vbo->glindex );
+		pglDeleteBuffers( 1, &vbo->glindex );
 
 	vbos.arraylist = NULL;
 
 	if( vbos.decaldata )
-		pglDeleteBuffersARB( 1, &vbos.decaldata->decalvbo );
+		pglDeleteBuffers( 1, &vbos.decaldata->decalvbo );
 
 	if( vbos.dlight_vbo )
-		pglDeleteBuffersARB( 1, &vbos.dlight_vbo );
+		pglDeleteBuffers( 1, &vbos.dlight_vbo );
 
 	if( vbos.decal_dlight_vbo )
-		pglDeleteBuffersARB( 1, &vbos.decal_dlight_vbo );
+		pglDeleteBuffers( 1, &vbos.decal_dlight_vbo );
 	vbos.decal_dlight_vbo = vbos.dlight_vbo = 0;
 
 	vbos.decaldata = NULL;
@@ -2501,7 +2501,7 @@ static void R_SetupVBOArrayStatic( vboarray_t *vbo, qboolean drawlightmap, qbool
 	if( vboarray.astate != VBO_ARRAY_STATIC )
 	{
 		// bind array
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
 		// dlights use same vertex array
 		if( vboarray.astate != VBO_ARRAY_DLIGHT )
 		{
@@ -2553,7 +2553,7 @@ static void R_SetupVBOArrayDlight( vboarray_t *vbo, texture_t *texture )
 		if( vboarray.astate == VBO_ARRAY_DECAL_DLIGHT )
 		{
 			// bind array
-			pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+			pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
 			pglEnableClientState( GL_VERTEX_ARRAY );
 			pglVertexPointer( 3, GL_FLOAT, sizeof( vbovertex_t ), (void*)offsetof(vbovertex_t,pos) );
 		}
@@ -2567,7 +2567,7 @@ static void R_SetupVBOArrayDlight( vboarray_t *vbo, texture_t *texture )
 		vboarray.lstate = VBO_LIGHTMAP_DYNAMIC;
 
 		// replace lightmap texcoord array by dlight array
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
 		if( vbos.dlight_vbo  )
 			pglTexCoordPointer( 2, GL_FLOAT, sizeof( float ) * 2, 0 );
 		else
@@ -2583,9 +2583,9 @@ static void R_SetupVBOArrayDecalDlight( int decalcount )
 {
 	if( vbos.decal_dlight_vbo )
 	{
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
 #if !SPARSE_DECALS_UPLOAD
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * DECAL_VERTS_MAX * decalcount, vbos.decal_dlight, GL_STREAM_DRAW_ARB );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * DECAL_VERTS_MAX * decalcount, vbos.decal_dlight, GL_STREAM_DRAW_ARB );
 #endif
 	}
 
@@ -2644,7 +2644,7 @@ static void R_AdditionalPasses( vboarray_t *vbo, int indexlen, void *indexarray,
 
 		// when drawing dlights, we need to bind array and unbind it again
 		if( resetvbo )
-			pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+			pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
 
 		pglTexCoordPointer( 2, GL_FLOAT, sizeof( vbovertex_t ), (void*)(offset + offsetof( vbovertex_t, gl_tc )));
 
@@ -2740,7 +2740,7 @@ static void R_DrawDlightedDecals( vboarray_t *vbo, msurface_t *newsurf, msurface
 
 #if SPARSE_DECALS_UPLOAD
 	if( vbos.decal_dlight_vbo )
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
 #endif
 
 	// restore states pointers for next dynamic lightmap
@@ -2760,10 +2760,10 @@ static void R_FlushDlights( vboarray_t *vbo, int min_index, int max_index, int d
 	if( vbos.dlight_vbo )
 	{
 #ifndef MINIMIZE_UPLOAD
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), vbos.dlight_tc + min_index, GL_STREAM_DRAW_ARB );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), vbos.dlight_tc + min_index, GL_STREAM_DRAW_ARB );
 #endif
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbo->glindex );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbo->glindex );
 		pglVertexPointer( 3, GL_FLOAT, sizeof( vbovertex_t ),  (void*)(min_index* sizeof( vbovertex_t ) + offsetof(vbovertex_t,pos)) );
 		GL_SelectTexture( mtst.tmu_gl );
 		pglTexCoordPointer( 2, GL_FLOAT, sizeof( vbovertex_t ),  (void*)(min_index * sizeof( vbovertex_t ) + offsetof(vbovertex_t,gl_tc)) );
@@ -2795,8 +2795,8 @@ static void R_AddSurfaceDecalsDlight( msurface_t *surf, int *pdecalcount )
 #if SPARSE_DECALS_UPLOAD
 	if( decalcount == 0 )
 	{
-		pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
-		pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
+		pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
+		pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vbos.decal_dlight ), NULL, GL_STREAM_DRAW_ARB );
 	}
 #endif
 	for( pdecal = surf->pdecals; pdecal; pdecal = pdecal->pnext )
@@ -2834,8 +2834,8 @@ static void R_AddSurfaceDecalsDlight( msurface_t *surf, int *pdecalcount )
 #if SPARSE_DECALS_UPLOAD
 		if( vbos.dlight_vbo )
 		{
-			pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
-			pglBufferSubDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * decalcount * DECAL_VERTS_MAX, sizeof( vbovertex_t )* numVerts, vbos.decal_dlight + decalcount * DECAL_VERTS_MAX );
+			pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decal_dlight_vbo );
+			pglBufferSubData( GL_ARRAY_BUFFER_ARB, sizeof( vbovertex_t ) * decalcount * DECAL_VERTS_MAX, sizeof( vbovertex_t )* numVerts, vbos.decal_dlight + decalcount * DECAL_VERTS_MAX );
 		}
 #endif
 
@@ -2878,8 +2878,8 @@ static void R_DrawVBODlights( vboarray_t *vbo, vbotexture_t *vbotex, texture_t *
 #endif
 			}
 #ifdef MINIMIZE_UPLOAD
-			pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
-			pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), NULL, GL_STREAM_DRAW_ARB );
+			pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+			pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), NULL, GL_STREAM_DRAW_ARB );
 #endif
 		}
 		else
@@ -2926,8 +2926,8 @@ static void R_DrawVBODlights( vboarray_t *vbo, vbotexture_t *vbotex, texture_t *
 				// invalidate buffer to prevent blocking on SubData
 				if( vbos.dlight_vbo )
 				{
-					pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
-					pglBufferDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), NULL, GL_STREAM_DRAW_ARB );
+					pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+					pglBufferData( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t )* (max_index - min_index), NULL, GL_STREAM_DRAW_ARB );
 				}
 #else
 				if( vbos.dlight_vbo )
@@ -2974,8 +2974,8 @@ static void R_DrawVBODlights( vboarray_t *vbo, vbotexture_t *vbotex, texture_t *
 #else
 			if( vbos.dlight_vbo )
 			{
-				pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
-				pglBufferSubDataARB( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t ) * (indexbase - min_index), sizeof( vec2_t )* surf->polys->numverts, vbos.dlight_tc + indexbase );
+				pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.dlight_vbo );
+				pglBufferSubData( GL_ARRAY_BUFFER_ARB, sizeof( vec2_t ) * (indexbase - min_index), sizeof( vec2_t )* surf->polys->numverts, vbos.dlight_tc + indexbase );
 			}
 #endif
 
@@ -3071,7 +3071,7 @@ static void R_DrawLightmappedVBO( vboarray_t *vbo, vbotexture_t *vbotex, texture
 static void R_SetupVBOArrayDecal( qboolean drawlightmap )
 {
 	// prepare for decal draw
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, vbos.decaldata->decalvbo );
 	// Set pointers to vbodecaldata->decalvbo
 	if( drawlightmap )
 	{
@@ -3093,7 +3093,7 @@ static void R_SetupVBOArrayDecal( qboolean drawlightmap )
 
 static void R_SetupVBOArrayDecalDyn( qboolean drawlightmap, float *v )
 {
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
 	pglVertexPointer( 3, GL_FLOAT, VERTEXSIZE * 4, v );
 	pglTexCoordPointer( 2, GL_FLOAT, VERTEXSIZE * 4, v + 3 );
 	if( drawlightmap )
@@ -3212,7 +3212,7 @@ static void R_ClearVBOState( qboolean drawlightmap, qboolean drawtextures )
 
 	pglDisableClientState( GL_VERTEX_ARRAY );
 	pglDisableClientState( GL_NORMAL_ARRAY );
-	pglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+	pglBindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
 
 	vboarray.astate = VBO_ARRAY_NONE;
 	vboarray.tstate = VBO_TEXTURE_NONE;

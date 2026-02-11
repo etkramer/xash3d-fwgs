@@ -1029,23 +1029,23 @@ static void GL_TextureImageCompressed( gl_texture_t *tex, GLint side, GLint leve
 #if !XASH_GLES
 	if( tex->target == GL_TEXTURE_1D )
 	{
-		if( subImage ) pglCompressedTexSubImage1DARB( tex->target, level, 0, width, tex->format, size, data );
-		else pglCompressedTexImage1DARB( tex->target, level, tex->format, width, 0, size, data );
+		if( subImage ) pglCompressedTexSubImage1D( tex->target, level, 0, width, tex->format, size, data );
+		else pglCompressedTexImage1D( tex->target, level, tex->format, width, 0, size, data );
 	}
 	else if( tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 	{
-		if( subImage ) pglCompressedTexSubImage2DARB( cubeTarget + side, level, 0, 0, width, height, tex->format, size, data );
-		else pglCompressedTexImage2DARB( cubeTarget + side, level, tex->format, width, height, 0, size, data );
+		if( subImage ) pglCompressedTexSubImage2D( cubeTarget + side, level, 0, 0, width, height, tex->format, size, data );
+		else pglCompressedTexImage2D( cubeTarget + side, level, tex->format, width, height, 0, size, data );
 	}
 	else if( tex->target == GL_TEXTURE_3D || tex->target == GL_TEXTURE_2D_ARRAY_EXT )
 	{
-		if( subImage ) pglCompressedTexSubImage3DARB( tex->target, level, 0, 0, 0, width, height, depth, tex->format, size, data );
-		else pglCompressedTexImage3DARB( tex->target, level, tex->format, width, height, depth, 0, size, data );
+		if( subImage ) pglCompressedTexSubImage3D( tex->target, level, 0, 0, 0, width, height, depth, tex->format, size, data );
+		else pglCompressedTexImage3D( tex->target, level, tex->format, width, height, depth, 0, size, data );
 	}
 	else // 2D or RECT
 	{
-		if( subImage ) pglCompressedTexSubImage2DARB( tex->target, level, 0, 0, width, height, tex->format, size, data );
-		else pglCompressedTexImage2DARB( tex->target, level, tex->format, width, height, 0, size, data );
+		if( subImage ) pglCompressedTexSubImage2D( tex->target, level, 0, 0, width, height, tex->format, size, data );
+		else pglCompressedTexImage2D( tex->target, level, tex->format, width, height, 0, size, data );
 	}
 #endif
 }

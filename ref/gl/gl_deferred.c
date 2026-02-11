@@ -118,17 +118,17 @@ static GLuint R_CompileShader( GLenum type, const char *source )
 	GLint status, len;
 	char infoLog[1024];
 
-	shader = pglCreateShaderObjectARB( type );
+	shader = pglCreateShader( type );
 	len = Q_strlen( source );
-	pglShaderSourceARB( shader, 1, &source, &len );
-	pglCompileShaderARB( shader );
+	pglShaderSource( shader, 1, &source, &len );
+	pglCompileShader( shader );
 
-	pglGetObjectParameterivARB( shader, GL_OBJECT_COMPILE_STATUS_ARB, &status );
+	pglGetShaderiv( shader, GL_COMPILE_STATUS, &status );
 	if( status == GL_FALSE )
 	{
-		pglGetInfoLogARB( shader, sizeof( infoLog ), NULL, infoLog );
+		pglGetShaderInfoLog( shader, sizeof( infoLog ), NULL, infoLog );
 		gEngfuncs.Con_Printf( S_ERROR "R_CompileShader: compile failed:\n%s\n", infoLog );
-		pglDeleteObjectARB( shader );
+		pglDeleteShader( shader );
 		return 0;
 	}
 
@@ -169,42 +169,42 @@ static qboolean R_InitLightingShader( void )
 	lightingShader.fragShader = R_CompileShader( GL_FRAGMENT_SHADER_ARB, lightingFragSrc );
 	if( !lightingShader.fragShader )
 	{
-		pglDeleteObjectARB( lightingShader.vertShader );
+		pglDeleteShader( lightingShader.vertShader );
 		return false;
 	}
 
 	// Link program
-	lightingShader.program = pglCreateProgramObjectARB();
-	pglAttachObjectARB( lightingShader.program, lightingShader.vertShader );
-	pglAttachObjectARB( lightingShader.program, lightingShader.fragShader );
-	pglLinkProgramARB( lightingShader.program );
+	lightingShader.program = pglCreateProgram();
+	pglAttachShader( lightingShader.program, lightingShader.vertShader );
+	pglAttachShader( lightingShader.program, lightingShader.fragShader );
+	pglLinkProgram( lightingShader.program );
 
-	pglGetObjectParameterivARB( lightingShader.program, GL_OBJECT_LINK_STATUS_ARB, &status );
+	pglGetProgramiv( lightingShader.program, GL_LINK_STATUS, &status );
 	if( status == GL_FALSE )
 	{
-		pglGetInfoLogARB( lightingShader.program, sizeof( infoLog ), NULL, infoLog );
+		pglGetProgramInfoLog( lightingShader.program, sizeof( infoLog ), NULL, infoLog );
 		gEngfuncs.Con_Printf( S_ERROR "R_InitLightingShader: link failed:\n%s\n", infoLog );
-		pglDeleteObjectARB( lightingShader.vertShader );
-		pglDeleteObjectARB( lightingShader.fragShader );
-		pglDeleteObjectARB( lightingShader.program );
+		pglDeleteShader( lightingShader.vertShader );
+		pglDeleteShader( lightingShader.fragShader );
+		pglDeleteProgram( lightingShader.program );
 		return false;
 	}
 
 	// Get uniform locations
-	lightingShader.uAlbedo = pglGetUniformLocationARB( lightingShader.program, "uAlbedo" );
-	lightingShader.uNormal = pglGetUniformLocationARB( lightingShader.program, "uNormal" );
-	lightingShader.uLightmap = pglGetUniformLocationARB( lightingShader.program, "uLightmap" );
-	lightingShader.uDebugMode = pglGetUniformLocationARB( lightingShader.program, "uDebugMode" );
+	lightingShader.uAlbedo = pglGetUniformLocation( lightingShader.program, "uAlbedo" );
+	lightingShader.uNormal = pglGetUniformLocation( lightingShader.program, "uNormal" );
+	lightingShader.uLightmap = pglGetUniformLocation( lightingShader.program, "uLightmap" );
+	lightingShader.uDebugMode = pglGetUniformLocation( lightingShader.program, "uDebugMode" );
 
 	// Set texture units (these don't change)
-	pglUseProgramObjectARB( lightingShader.program );
+	pglUseProgram( lightingShader.program );
 	if( lightingShader.uAlbedo >= 0 )
-		pglUniform1iARB( lightingShader.uAlbedo, 0 );
+		pglUniform1i( lightingShader.uAlbedo, 0 );
 	if( lightingShader.uNormal >= 0 )
-		pglUniform1iARB( lightingShader.uNormal, 1 );
+		pglUniform1i( lightingShader.uNormal, 1 );
 	if( lightingShader.uLightmap >= 0 )
-		pglUniform1iARB( lightingShader.uLightmap, 2 );
-	pglUseProgramObjectARB( 0 );
+		pglUniform1i( lightingShader.uLightmap, 2 );
+	pglUseProgram( 0 );
 
 	// Create VAO for fullscreen triangle (required for core profile)
 	pglGenVertexArrays( 1, &lightingShader.vao );
@@ -229,13 +229,13 @@ static void R_ShutdownLightingShader( void )
 		pglDeleteVertexArrays( 1, &lightingShader.vao );
 
 	if( lightingShader.program )
-		pglDeleteObjectARB( lightingShader.program );
+		pglDeleteProgram( lightingShader.program );
 
 	if( lightingShader.vertShader )
-		pglDeleteObjectARB( lightingShader.vertShader );
+		pglDeleteShader( lightingShader.vertShader );
 
 	if( lightingShader.fragShader )
-		pglDeleteObjectARB( lightingShader.fragShader );
+		pglDeleteShader( lightingShader.fragShader );
 
 	memset( &lightingShader, 0, sizeof( lightingShader ));
 
@@ -314,7 +314,7 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gbuffer.depthTex, 0 );
 
 	// Set draw buffers
-	pglDrawBuffersARB( 3, drawBuffers );
+	pglDrawBuffers( 3, drawBuffers );
 
 	// Check framebuffer status
 	status = pglCheckFramebufferStatus( GL_FRAMEBUFFER );
@@ -543,11 +543,11 @@ void R_DeferredLightingPass( void )
 	pglDepthMask( GL_FALSE );
 
 	// Use lighting shader
-	pglUseProgramObjectARB( lightingShader.program );
+	pglUseProgram( lightingShader.program );
 
 	// Set debug mode uniform
 	if( lightingShader.uDebugMode >= 0 )
-		pglUniform1iARB( lightingShader.uDebugMode, debugMode );
+		pglUniform1i( lightingShader.uDebugMode, debugMode );
 
 	// Bind G-buffer textures
 	// Unit 0: Albedo
@@ -575,7 +575,7 @@ void R_DeferredLightingPass( void )
 	pglActiveTexture( GL_TEXTURE0_ARB );
 	pglBindTexture( GL_TEXTURE_2D, 0 );
 
-	pglUseProgramObjectARB( 0 );
+	pglUseProgram( 0 );
 
 #if !XASH_GL_STATIC
 	// Invalidate GL2 shim program state since we used an external shader

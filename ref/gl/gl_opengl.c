@@ -44,11 +44,8 @@ glconfig_t	glConfig;
 glstate_t	glState;
 glwstate_t	glw_state;
 
-#if XASH_GL_STATIC
-	#define GL_CALL( x ) #x, NULL
-#else
-	#define GL_CALL( x ) #x, (void**)&p##x
-#endif
+// Always use dynamic GL loading
+#define GL_CALL( x ) #x, (void**)&p##x
 
 static const dllfunc_t opengl_110funcs[] =
 {
@@ -180,10 +177,10 @@ static const dllfunc_t opengl_110funcs[] =
 
 static const dllfunc_t debugoutputfuncs[] =
 {
-{ GL_CALL( glDebugMessageControlARB ) },
-{ GL_CALL( glDebugMessageInsertARB ) },
-{ GL_CALL( glDebugMessageCallbackARB ) },
-{ GL_CALL( glGetDebugMessageLogARB ) },
+{ GL_CALL( glDebugMessageControl ) },
+{ GL_CALL( glDebugMessageInsert ) },
+{ GL_CALL( glDebugMessageCallback ) },
+{ GL_CALL( glGetDebugMessageLog ) },
 };
 
 static const dllfunc_t multitexturefuncs[] =
@@ -207,43 +204,25 @@ static const dllfunc_t texture3dextfuncs[] =
 
 static const dllfunc_t texturecompressionfuncs[] =
 {
-{ GL_CALL( glCompressedTexImage3DARB ) },
-{ GL_CALL( glCompressedTexImage2DARB ) },
-{ GL_CALL( glCompressedTexImage1DARB ) },
-{ GL_CALL( glCompressedTexSubImage3DARB ) },
-{ GL_CALL( glCompressedTexSubImage2DARB ) },
-{ GL_CALL( glCompressedTexSubImage1DARB ) },
+{ GL_CALL( glCompressedTexImage3D ) },
+{ GL_CALL( glCompressedTexImage2D ) },
+{ GL_CALL( glCompressedTexImage1D ) },
+{ GL_CALL( glCompressedTexSubImage3D ) },
+{ GL_CALL( glCompressedTexSubImage2D ) },
+{ GL_CALL( glCompressedTexSubImage1D ) },
 { GL_CALL( glGetCompressedTexImage ) },
 };
 
-#if XASH_GLES
 static const dllfunc_t vbofuncs[] =
 {
-{ GL_CALL( glBindBufferARB ) },
-{ GL_CALL( glDeleteBuffersARB ) },
-{ GL_CALL( glGenBuffersARB ) },
-{ GL_CALL( glIsBufferARB ) },
-#if !XASH_GLES
-{ GL_CALL( glMapBufferARB ) },
-{ GL_CALL( glUnmapBufferARB ) },
-#endif
-{ GL_CALL( glBufferDataARB ) },
-{ GL_CALL( glBufferSubDataARB ) },
-};
-#endif
-
-static const dllfunc_t vbofuncs_core[] =
-{
-{ "glBindBuffer", (void **)&pglBindBufferARB },
-{ "glDeleteBuffers", (void **)&pglDeleteBuffersARB },
-{ "glGenBuffers", (void **)&pglGenBuffersARB },
-{ "glIsBuffer", (void **)&pglIsBufferARB },
-#if !XASH_GLES
-{ "glMapBuffer", (void **)&pglMapBufferARB },
-{ "glUnmapBuffer", (void **)&pglUnmapBufferARB },
-#endif
-{ "glBufferData", (void **)&pglBufferDataARB },
-{ "glBufferSubData", (void **)&pglBufferSubDataARB },
+{ GL_CALL( glBindBuffer ) },
+{ GL_CALL( glDeleteBuffers ) },
+{ GL_CALL( glGenBuffers ) },
+{ GL_CALL( glIsBuffer ) },
+{ GL_CALL( glMapBuffer ) },
+{ GL_CALL( glUnmapBuffer ) },
+{ GL_CALL( glBufferData ) },
+{ GL_CALL( glBufferSubData ) },
 };
 
 static const dllfunc_t multisampletexfuncs[] =
@@ -262,17 +241,10 @@ static const dllfunc_t drawrangeelementsextfuncs[] =
 };
 
 
-// mangling in gl2shim???
-// still need resolve some ext dynamicly, and mangling beginend wrappers will help only with LTO
-// anyway this will not work with gl-wes/nanogl, we do not link to libGLESv2, so skip this now
-#if !XASH_GL_STATIC
 static const dllfunc_t mapbufferrangefuncs[] =
 {
 { GL_CALL( glMapBufferRange ) },
 { GL_CALL( glFlushMappedBufferRange ) },
-#if XASH_GLES
-{ GL_CALL( glUnmapBufferARB ) },
-#endif
 };
 
 static const dllfunc_t drawrangeelementsbasevertexfuncs[] =
@@ -285,76 +257,59 @@ static const dllfunc_t bufferstoragefuncs[] =
 { GL_CALL( glBufferStorage ) },
 };
 
-/*
-==================
-Even if *ARB functions may work in GL driver in Core context,
-renderdoc completely ignores this calls, so we cannot workaround this
-by removing ARB suffix after failed function resolve
-I desided not to remove ARB suffix from function declarations because
-it historicaly related to ARB_shader_object extension, not GL2+ functions
-and all shader code from XashXT/ancient xash3d uses it too
-Commented out lines left there intentionally to prevent usage on core/gles
-==================
-*/
-
-static const dllfunc_t shaderobjectsfuncs_gles[] =
+static const dllfunc_t shaderobjectsfuncs[] =
 {
-{ "glDeleteShader"             , (void **)&pglDeleteObjectARB },
-//{ "glGetHandleARB"           , (void **)&pglGetHandleARB },
-{ "glDetachShader"             , (void **)&pglDetachObjectARB },
-{ "glCreateShader"             , (void **)&pglCreateShaderObjectARB },
-{ "glShaderSource"             , (void **)&pglShaderSourceARB },
-{ "glCompileShader"            , (void **)&pglCompileShaderARB },
-{ "glCreateProgram"            , (void **)&pglCreateProgramObjectARB },
-{ "glAttachShader"             , (void **)&pglAttachObjectARB },
-{ "glLinkProgram"              , (void **)&pglLinkProgramARB },
-{ "glUseProgram"               , (void **)&pglUseProgramObjectARB },
-{ "glValidateProgram"          , (void **)&pglValidateProgramARB },
-{ "glUniform1f"                , (void **)&pglUniform1fARB },
-{ "glUniform2f"                , (void **)&pglUniform2fARB },
-{ "glUniform3f"                , (void **)&pglUniform3fARB },
-{ "glUniform4f"                , (void **)&pglUniform4fARB },
-{ "glUniform1i"                , (void **)&pglUniform1iARB },
-{ "glUniform2i"                , (void **)&pglUniform2iARB },
-{ "glUniform3i"                , (void **)&pglUniform3iARB },
-{ "glUniform4i"                , (void **)&pglUniform4iARB },
-{ "glUniform1f"                , (void **)&pglUniform1fvARB },
-{ "glUniform2fv"               , (void **)&pglUniform2fvARB },
-{ "glUniform3fv"               , (void **)&pglUniform3fvARB },
-{ "glUniform4fv"               , (void **)&pglUniform4fvARB },
-{ "glUniform1iv"               , (void **)&pglUniform1ivARB },
-{ "glUniform2iv"               , (void **)&pglUniform2ivARB },
-{ "glUniform3iv"               , (void **)&pglUniform3ivARB },
-{ "glUniform4iv"               , (void **)&pglUniform4ivARB },
-{ "glUniformMatrix2fv"         , (void **)&pglUniformMatrix2fvARB },
-{ "glUniformMatrix3fv"         , (void **)&pglUniformMatrix3fvARB },
-{ "glUniformMatrix4fv"         , (void **)&pglUniformMatrix4fvARB },
-//{ "glGetShaderfv"            , (void **)&pglGetObjectParameterfvARB }, // missing in ES2?
-{ "glGetShaderiv"              , (void **)&pglGetObjectParameterivARB },
-{ "glGetShaderInfoLog"         , (void **)&pglGetInfoLogARB },
-//{ "glGetAttachedObjects"     , (void **)&pglGetAttachedObjectsARB }, // missing in ES2?
-{ "glGetUniformLocation"       , (void **)&pglGetUniformLocationARB },
-{ "glGetActiveUniform"         , (void **)&pglGetActiveUniformARB },
-{ "glGetUniformfv"             , (void **)&pglGetUniformfvARB },
-{ "glGetUniformiv"             , (void **)&pglGetUniformivARB },
-{ "glGetShaderSource"          , (void **)&pglGetShaderSourceARB },
-{ "glVertexAttribPointer"      , (void **)&pglVertexAttribPointerARB },
-{ "glEnableVertexAttribArray"  , (void **)&pglEnableVertexAttribArrayARB },
-{ "glDisableVertexAttribArray" , (void **)&pglDisableVertexAttribArrayARB },
-{ "glBindAttribLocation"       , (void **)&pglBindAttribLocationARB },
-{ "glGetActiveAttrib"          , (void **)&pglGetActiveAttribARB },
-{ "glGetAttribLocation"        , (void **)&pglGetAttribLocationARB },
-{ "glVertexAttrib2f"           , (void **)&pglVertexAttrib2fARB },
-{ "glVertexAttrib2fv"          , (void **)&pglVertexAttrib2fvARB },
-{ "glVertexAttrib3fv"          , (void **)&pglVertexAttrib3fvARB },
-
-// Core/GLES only
+{ GL_CALL( glDeleteShader ) },
+{ GL_CALL( glDetachShader ) },
+{ GL_CALL( glCreateShader ) },
+{ GL_CALL( glShaderSource ) },
+{ GL_CALL( glCompileShader ) },
+{ GL_CALL( glCreateProgram ) },
+{ GL_CALL( glAttachShader ) },
+{ GL_CALL( glLinkProgram ) },
+{ GL_CALL( glUseProgram ) },
+{ GL_CALL( glValidateProgram ) },
+{ GL_CALL( glDeleteProgram ) },
+{ GL_CALL( glGetProgramiv ) },
+{ GL_CALL( glGetProgramInfoLog ) },
+{ GL_CALL( glUniform1f ) },
+{ GL_CALL( glUniform2f ) },
+{ GL_CALL( glUniform3f ) },
+{ GL_CALL( glUniform4f ) },
+{ GL_CALL( glUniform1i ) },
+{ GL_CALL( glUniform2i ) },
+{ GL_CALL( glUniform3i ) },
+{ GL_CALL( glUniform4i ) },
+{ GL_CALL( glUniform1fv ) },
+{ GL_CALL( glUniform2fv ) },
+{ GL_CALL( glUniform3fv ) },
+{ GL_CALL( glUniform4fv ) },
+{ GL_CALL( glUniform1iv ) },
+{ GL_CALL( glUniform2iv ) },
+{ GL_CALL( glUniform3iv ) },
+{ GL_CALL( glUniform4iv ) },
+{ GL_CALL( glUniformMatrix2fv ) },
+{ GL_CALL( glUniformMatrix3fv ) },
+{ GL_CALL( glUniformMatrix4fv ) },
+{ GL_CALL( glGetShaderiv ) },
+{ GL_CALL( glGetShaderInfoLog ) },
+{ GL_CALL( glGetUniformLocation ) },
+{ GL_CALL( glGetActiveUniform ) },
+{ GL_CALL( glGetUniformfv ) },
+{ GL_CALL( glGetUniformiv ) },
+{ GL_CALL( glGetShaderSource ) },
+{ GL_CALL( glVertexAttribPointer ) },
+{ GL_CALL( glEnableVertexAttribArray ) },
+{ GL_CALL( glDisableVertexAttribArray ) },
+{ GL_CALL( glBindAttribLocation ) },
+{ GL_CALL( glGetActiveAttrib ) },
+{ GL_CALL( glGetAttribLocation ) },
+{ GL_CALL( glVertexAttrib2f ) },
+{ GL_CALL( glVertexAttrib2fv ) },
+{ GL_CALL( glVertexAttrib3fv ) },
 { GL_CALL( glGetProgramiv ) },
 { GL_CALL( glDeleteProgram ) },
 { GL_CALL( glGetProgramInfoLog ) },
-//{ "glVertexAttrib4f"              , (void **)&pglVertexAttrib4fARB },
-//{ "glVertexAttrib4fv"             , (void **)&pglVertexAttrib4fvARB },
-//{ "glVertexAttrib4ubv"            , (void **)&pglVertexAttrib4ubvARB },
 };
 
 static const dllfunc_t vaofuncs[] =
@@ -373,26 +328,8 @@ static const dllfunc_t fbofuncs[] =
 { GL_CALL( glCheckFramebufferStatus ) },
 { GL_CALL( glFramebufferTexture2D ) },
 { GL_CALL( glBlitFramebuffer ) },
-{ GL_CALL( glDrawBuffersARB ) },
+{ GL_CALL( glDrawBuffers ) },
 };
-
-#if XASH_GLES
-static const dllfunc_t multitexturefuncs_es[] =
-{
-{ GL_CALL( glActiveTexture ) },
-{ GL_CALL( glActiveTextureARB ) },
-{ GL_CALL( glClientActiveTexture ) },
-{ GL_CALL( glClientActiveTextureARB ) },
-};
-
-static const dllfunc_t multitexturefuncs_es2[] =
-{
-{ GL_CALL( glActiveTexture ) },
-{ GL_CALL( glActiveTextureARB ) },
-};
-#endif
-
-#endif // !XASH_GL_STATIC
 
 /*
 ========================
@@ -474,7 +411,6 @@ static qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, siz
 		return false;
 	}
 
-#if !XASH_GL_STATIC
 	// clear exports
 	ClearExports( funcs, num_funcs );
 
@@ -486,11 +422,7 @@ static qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, siz
 			string name;
 			char *end;
 			size_t j = 0;
-#if XASH_GLES
-			const char *suffixes[] = { "", "EXT", "OES" };
-#else
 			const char *suffixes[] = { "", "EXT" };
-#endif
 
 			// HACK: fix ARB names
 			Q_strncpy( name, funcs[i].name, sizeof( name ));
@@ -531,7 +463,6 @@ static qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, siz
 			}
 		}
 	}
-#endif
 
 	if( GL_Support( r_ext ))
 	{
@@ -686,129 +617,6 @@ static void R_RenderInfo_f( void )
 	R_RenderInfo( false );
 }
 
-#if XASH_GLES
-static void GL_InitExtensionsGLES( void )
-{
-	int extid;
-
-	// intialize wrapper type
-#if XASH_NANOGL
-	glConfig.context = CONTEXT_TYPE_GLES_1_X;
-	glConfig.wrapper = GLES_WRAPPER_NANOGL;
-#elif XASH_WES
-	glConfig.context = CONTEXT_TYPE_GLES_2_X;
-	glConfig.wrapper = GLES_WRAPPER_WES;
-#elif XASH_GLES3COMPAT
-	glConfig.context = CONTEXT_TYPE_GLES_2_X;
-	glConfig.wrapper = GLES_WRAPPER_NONE;
-#else
-	#error "unknown gles wrapper"
-#endif
-
-	glConfig.hardware_type = GLHW_GENERIC;
-
-	for( extid = GL_OPENGL_110 + 1; extid < GL_EXTCOUNT; extid++ )
-	{
-		switch( extid )
-		{
-		case GL_ARB_VERTEX_BUFFER_OBJECT_EXT:
-			GL_CheckExtension( "vertex_buffer_object", vbofuncs, ARRAYSIZE( vbofuncs ), "gl_vertex_buffer_object", extid, 1.0 );
-			break;
-		case GL_ARB_MULTITEXTURE:
-			if( !GL_CheckExtension( "multitexture", multitexturefuncs, ARRAYSIZE( multitexturefuncs ), "gl_arb_multitexture", GL_ARB_MULTITEXTURE, 1.0 ) && glConfig.wrapper == GLES_WRAPPER_NONE )
-			{
-#if !XASH_GL_STATIC
-				if( !GL_CheckExtension( "multitexture_es1", multitexturefuncs_es, ARRAYSIZE( multitexturefuncs_es ), "gl_arb_multitexture", GL_ARB_MULTITEXTURE, 1.0 )
-						&& !GL_CheckExtension( "multitexture_es2", multitexturefuncs_es2, ARRAYSIZE( multitexturefuncs_es2 ), "gl_arb_multitexture", GL_ARB_MULTITEXTURE, 2.0 ))
-					break;
-#endif
-			}
-			GL_SetExtension( extid, true ); // required to be supported by wrapper
-
-			pglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glConfig.max_texture_units );
-			if( glConfig.max_texture_units <= 1 )
-				pglGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &glConfig.max_texture_units );
-			if( glConfig.max_texture_units <= 1 )
-			{
-				GL_SetExtension( extid, false );
-				glConfig.max_texture_units = 1;
-			}
-
-			glConfig.max_texture_coords = glConfig.max_teximage_units = glConfig.max_texture_units;
-			break;
-		case GL_TEXTURE_CUBEMAP_EXT:
-			if( GL_CheckExtension( "GL_OES_texture_cube_map", NULL, 0, "gl_texture_cubemap", extid, 0 ))
-				pglGetIntegerv( GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &glConfig.max_cubemap_size );
-			break;
-		case GL_ANISOTROPY_EXT:
-			glConfig.max_texture_anisotropy = 0.0f;
-			if( GL_CheckExtension( "GL_EXT_texture_filter_anisotropic", NULL, 0, "gl_ext_anisotropic_filter", extid, 0 ))
-				pglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.max_texture_anisotropy );
-			break;
-		case GL_TEXTURE_LOD_BIAS:
-			if( GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, 0, "gl_texture_mipmap_biasing", extid, 0 ))
-				pglGetFloatv( GL_MAX_TEXTURE_LOD_BIAS_EXT, &glConfig.max_texture_lod_bias );
-			break;
-		case GL_ARB_TEXTURE_NPOT_EXT:
-			// according to spec, GLES3.0 made NPOT required
-			// thanks lewa_j for advice
-			if( glConfig.version_major >= 3 )
-				GL_SetExtension( extid, true );
-			else
-				GL_CheckExtension( "GL_OES_texture_npot", NULL, 0, "gl_texture_npot", extid, 0 );
-			break;
-#if !XASH_GL_STATIC
-		case GL_SHADER_OBJECTS_EXT:
-			GL_CheckExtension( "ES2 Shaders", shaderobjectsfuncs_gles, ARRAYSIZE( shaderobjectsfuncs_gles ), "gl_shaderobjects", extid, 2.0 );
-			break;
-		case GL_ARB_VERTEX_ARRAY_OBJECT_EXT:
-			if( !GL_CheckExtension( "GL_OES_vertex_array_object", vaofuncs, ARRAYSIZE( vaofuncs ), "gl_vertex_array_object", extid, 3.0 ))
-				GL_CheckExtension( "GL_EXT_vertex_array_object", vaofuncs, ARRAYSIZE( vaofuncs ), "gl_vertex_array_object", extid, 3.0 );
-			break;
-		case GL_DRAW_RANGEELEMENTS_EXT:
-			if( !GL_CheckExtension( "GL_EXT_draw_range_elements", drawrangeelementsfuncs, ARRAYSIZE( drawrangeelementsfuncs ), "gl_drawrangeelements", extid, 3.0 ))
-				GL_CheckExtension( "GL_OES_draw_range_elements", drawrangeelementsfuncs, ARRAYSIZE( drawrangeelementsfuncs ), "gl_drawrangeelements", extid, 3.0 );
-			break;
-		case GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT:
-			if( !GL_CheckExtension( "GL_OES_draw_elements_base_vertex", drawrangeelementsbasevertexfuncs, ARRAYSIZE( drawrangeelementsbasevertexfuncs ), "gl_drawrangeelementsbasevertex", GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT, 0 ))
-				GL_CheckExtension( "GL_EXT_draw_elements_base_vertex", drawrangeelementsbasevertexfuncs, ARRAYSIZE( drawrangeelementsbasevertexfuncs ), "gl_drawrangeelementsbasevertex", GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT, 3.2 );
-			break;
-		case GL_MAP_BUFFER_RANGE_EXT:
-			GL_CheckExtension( "GL_EXT_map_buffer_range", mapbufferrangefuncs, ARRAYSIZE( mapbufferrangefuncs ), "gl_map_buffer_range", GL_MAP_BUFFER_RANGE_EXT , 3.0);
-			break;
-		case GL_BUFFER_STORAGE_EXT:
-			GL_CheckExtension( "GL_EXT_buffer_storage", bufferstoragefuncs, ARRAYSIZE( bufferstoragefuncs ), "gl_buffer_storage", GL_BUFFER_STORAGE_EXT, 0);
-			break;
-
-#endif
-		case GL_DEBUG_OUTPUT:
-			if( glw_state.extended )
-				GL_CheckExtension( "GL_KHR_debug", debugoutputfuncs, ARRAYSIZE( debugoutputfuncs ), "gl_debug_output", extid, 0 );
-			else
-				GL_SetExtension( extid, false );
-			break;
-		// case GL_TEXTURE_COMPRESSION_EXT: NOPE
-		// case GL_SHADER_GLSL100_EXT: NOPE
-		// case GL_TEXTURE_2D_RECT_EXT: NOPE
-		// case GL_TEXTURE_ARRAY_EXT: NOPE
-		// case GL_TEXTURE_3D_EXT: NOPE
-		// case GL_CLAMPTOEDGE_EXT: NOPE
-		// case GL_CLAMP_TEXBORDER_EXT: NOPE
-		// case GL_ARB_TEXTURE_FLOAT_EXT: NOPE
-		// case GL_ARB_DEPTH_FLOAT_EXT: NOPE
-		// case GL_ARB_SEAMLESS_CUBEMAP: NOPE
-		// case GL_EXT_GPU_SHADER4: NOPE
-		// case GL_DEPTH_TEXTURE: NOPE
-		// case GL_DRAWRANGEELEMENTS_EXT: NOPE
-		default:
-			GL_SetExtension( extid, false );
-		}
-	}
-#if !XASH_GL_STATIC
-	GL2_ShimInit();
-#endif
-}
-#else
 static void GL_InitExtensionsBigGL( void )
 {
 	// intialize wrapper type
@@ -890,17 +698,15 @@ static void GL_InitExtensionsBigGL( void )
 	GL_CheckExtension( "GL_ARB_texture_float", NULL, 0, "gl_texture_float", GL_ARB_TEXTURE_FLOAT_EXT, 0 );
 	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, 0, "gl_texture_depth_float", GL_ARB_DEPTH_FLOAT_EXT, 0 );
 	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, 0, NULL, GL_EXT_GPU_SHADER4, 0 ); // don't confuse users
-	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs_core, ARRAYSIZE( vbofuncs_core ), "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
+	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs, ARRAYSIZE( vbofuncs ), "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
 	GL_CheckExtension( "GL_ARB_texture_multisample", multisampletexfuncs, ARRAYSIZE( multisampletexfuncs ), "gl_texture_multisample", GL_TEXTURE_MULTISAMPLE, 0 );
 	GL_CheckExtension( "GL_ARB_texture_compression_bptc", NULL, 0, "gl_texture_bptc_compression", GL_ARB_TEXTURE_COMPRESSION_BPTC, 0 );
-#if !XASH_GL_STATIC
-	GL_CheckExtension( "shader_objects", shaderobjectsfuncs_gles, ARRAYSIZE( shaderobjectsfuncs_gles ), "gl_shaderobjects", GL_SHADER_OBJECTS_EXT, 2.0 );
+	GL_CheckExtension( "shader_objects", shaderobjectsfuncs, ARRAYSIZE( shaderobjectsfuncs ), "gl_shaderobjects", GL_SHADER_OBJECTS_EXT, 2.0 );
 	GL_CheckExtension( "GL_ARB_vertex_array_object", vaofuncs, ARRAYSIZE( vaofuncs ), "gl_vertex_array_object", GL_ARB_VERTEX_ARRAY_OBJECT_EXT, 3.0 );
 	GL_CheckExtension( "GL_ARB_buffer_storage", bufferstoragefuncs, ARRAYSIZE( bufferstoragefuncs ), "gl_buffer_storage", GL_BUFFER_STORAGE_EXT, 4.4);
 	GL_CheckExtension( "GL_ARB_map_buffer_range", mapbufferrangefuncs, ARRAYSIZE( mapbufferrangefuncs ), "gl_map_buffer_range", GL_MAP_BUFFER_RANGE_EXT , 3.0);
 	GL_CheckExtension( "GL_ARB_draw_elements_base_vertex", drawrangeelementsbasevertexfuncs, ARRAYSIZE( drawrangeelementsbasevertexfuncs ), "gl_drawrangeelementsbasevertex", GL_DRAW_RANGE_ELEMENTS_BASE_VERTEX_EXT, 3.2 );
 	GL_CheckExtension( "GL_ARB_framebuffer_object", fbofuncs, ARRAYSIZE( fbofuncs ), "gl_framebuffer_object", GL_FRAMEBUFFER_OBJECT_EXT, 3.0 );
-#endif
 	if( GL_CheckExtension( "GL_ARB_shading_language_100", NULL, 0, NULL, GL_SHADER_GLSL100_EXT, 2.0 ))
 	{
 		pglGetIntegerv( GL_MAX_TEXTURE_COORDS_ARB, &glConfig.max_texture_coords );
@@ -929,9 +735,7 @@ static void GL_InitExtensionsBigGL( void )
 		if( GL_CheckExtension( "glDrawRangeElementsEXT", drawrangeelementsextfuncs, ARRAYSIZE( drawrangeelementsextfuncs ),
 			"gl_drawrangelements", GL_DRAW_RANGEELEMENTS_EXT, 0 ))
 		{
-#if !XASH_GL_STATIC
 			pglDrawRangeElements = pglDrawRangeElementsEXT;
-#endif
 		}
 	}
 
@@ -939,11 +743,8 @@ static void GL_InitExtensionsBigGL( void )
 	if( glw_state.extended )
 		GL_CheckExtension( "GL_ARB_debug_output", debugoutputfuncs, ARRAYSIZE( debugoutputfuncs ), "gl_debug_output", GL_DEBUG_OUTPUT, 0 );
 
-#if !XASH_GLES
 	GL2_ShimInit();
-#endif
 }
-#endif
 
 void GL_InitExtensions( void )
 {
@@ -981,7 +782,6 @@ void GL_InitExtensions( void )
 		glConfig.version_major = major;
 		glConfig.version_minor = minor;
 	}
-#if !XASH_GL_STATIC
 	if( !glConfig.extensions_string )
 	{
 		int n = 0;
@@ -1008,14 +808,9 @@ void GL_InitExtensions( void )
 			}
 		}
 	}
-#endif
 	gEngfuncs.Con_Reportf( "^3Video^7: %s\n", glConfig.renderer_string );
 
-#if XASH_GLES
-	GL_InitExtensionsGLES();
-#else
 	GL_InitExtensionsBigGL();
-#endif
 
 	pglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.max_2d_texture_size );
 	if( glConfig.max_2d_texture_size <= 0 ) glConfig.max_2d_texture_size = 256;
@@ -1026,7 +821,7 @@ void GL_InitExtensions( void )
 		if( gpGlobals->developer )
 		{
 			gEngfuncs.Con_Reportf( "Installing GL_DebugOutput...\n");
-			pglDebugMessageCallbackARB( GL_DebugOutput, NULL );
+			pglDebugMessageCallback( GL_DebugOutput, NULL );
 
 			// force everything to happen in the main thread instead of in a separate driver thread
 			pglEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB );
@@ -1034,7 +829,7 @@ void GL_InitExtensions( void )
 		}
 
 		// enable all the low priority messages
-		pglDebugMessageControlARB( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW_ARB, 0, NULL, true );
+		pglDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW_ARB, 0, NULL, true );
 	}
 #endif
 	if( GL_Support( GL_TEXTURE_2D_RECT_EXT ))
@@ -1213,9 +1008,7 @@ void R_Shutdown( void )
 	R_ShutdownDeferred();
 	GL_RemoveCommands();
 	R_ShutdownImages();
-#if !XASH_GLES && !XASH_GL_STATIC
 	GL2_ShimShutdown();
-#endif
 
 	Mem_FreePool( &r_temppool );
 
@@ -1279,18 +1072,11 @@ void GL_SetupAttributes( int safegl )
 	int context_flags = 0; // REFTODO!!!!!
 	int samples = 0;
 
-#if !XASH_GL_STATIC
-	// Core profile is fine when GL2 shim is available to emulate FFP calls.
+	// Request OpenGL 4.1 Core Profile - GL2 shim emulates FFP calls via shaders
 	SetBits( context_flags, FCONTEXT_CORE_PROFILE );
 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_CORE );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 3 );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 2 );
-#else
-	// Static GL builds lack GL2 shim; request compatibility to avoid FFP INVALID_OPERATION spam.
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_PROFILE_MASK, REF_GL_CONTEXT_PROFILE_COMPATIBILITY );
-	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 2 );
+	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 4 );
 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 1 );
-#endif
 
 	if( gEngfuncs.Sys_CheckParm( "-gldebug" ))
 	{
