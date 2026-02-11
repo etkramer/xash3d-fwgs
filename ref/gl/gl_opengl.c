@@ -991,6 +991,7 @@ qboolean R_Init( void )
 	R_ClearDecals();
 	R_ClearScene();
 	R_InitDeferred();
+	R_InitVXGI();
 
 	return true;
 }
@@ -1005,6 +1006,7 @@ void R_Shutdown( void )
 	if( !glw_state.initialized )
 		return;
 
+	R_ShutdownVXGI();
 	R_ShutdownDeferred();
 	GL_RemoveCommands();
 	R_ShutdownImages();

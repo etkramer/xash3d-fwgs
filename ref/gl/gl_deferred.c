@@ -49,6 +49,17 @@ static struct
 	GLint uNormal;
 	GLint uLightmap;
 	GLint uDebugMode;
+	// VXGI uniforms
+	GLint uDepth;
+	GLint uVoxelTex;
+	GLint uGridMin;
+	GLint uGridMax;
+	GLint uGridSize;
+	GLint uVoxelSize;
+	GLint uInvViewProj;
+	GLint uCameraPos;
+	GLint uVXGIIntensity;
+	GLint uVXGIEnabled;
 	GLuint vao;
 	qboolean initialized;
 } lightingShader;
@@ -196,6 +207,18 @@ static qboolean R_InitLightingShader( void )
 	lightingShader.uLightmap = pglGetUniformLocation( lightingShader.program, "uLightmap" );
 	lightingShader.uDebugMode = pglGetUniformLocation( lightingShader.program, "uDebugMode" );
 
+	// VXGI uniform locations
+	lightingShader.uDepth = pglGetUniformLocation( lightingShader.program, "uDepth" );
+	lightingShader.uVoxelTex = pglGetUniformLocation( lightingShader.program, "uVoxelTex" );
+	lightingShader.uGridMin = pglGetUniformLocation( lightingShader.program, "uGridMin" );
+	lightingShader.uGridMax = pglGetUniformLocation( lightingShader.program, "uGridMax" );
+	lightingShader.uGridSize = pglGetUniformLocation( lightingShader.program, "uGridSize" );
+	lightingShader.uVoxelSize = pglGetUniformLocation( lightingShader.program, "uVoxelSize" );
+	lightingShader.uInvViewProj = pglGetUniformLocation( lightingShader.program, "uInvViewProj" );
+	lightingShader.uCameraPos = pglGetUniformLocation( lightingShader.program, "uCameraPos" );
+	lightingShader.uVXGIIntensity = pglGetUniformLocation( lightingShader.program, "uVXGIIntensity" );
+	lightingShader.uVXGIEnabled = pglGetUniformLocation( lightingShader.program, "uVXGIEnabled" );
+
 	// Set texture units (these don't change)
 	pglUseProgram( lightingShader.program );
 	if( lightingShader.uAlbedo >= 0 )
@@ -204,6 +227,10 @@ static qboolean R_InitLightingShader( void )
 		pglUniform1i( lightingShader.uNormal, 1 );
 	if( lightingShader.uLightmap >= 0 )
 		pglUniform1i( lightingShader.uLightmap, 2 );
+	if( lightingShader.uDepth >= 0 )
+		pglUniform1i( lightingShader.uDepth, 3 );
+	if( lightingShader.uVoxelTex >= 0 )
+		pglUniform1i( lightingShader.uVoxelTex, 4 );
 	pglUseProgram( 0 );
 
 	// Create VAO for fullscreen triangle (required for core profile)
@@ -311,6 +338,10 @@ static qboolean R_CreateGBuffer( int width, int height )
 	pglTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	// Disable depth comparison mode so we can read raw depth values
+	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE );
 	pglFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gbuffer.depthTex, 0 );
 
 	// Set draw buffers
@@ -526,11 +557,14 @@ Renders the fullscreen lighting pass
 void R_DeferredLightingPass( void )
 {
 	int debugMode;
+	qboolean vxgiActive;
+	matrix4x4 invViewProj;
 
 	if( !lightingShader.initialized || !gbuffer.initialized )
 		return;
 
 	debugMode = gl_deferred_debug ? (int)gl_deferred_debug->value : 0;
+	vxgiActive = R_VXGIActive();
 
 	// Set up viewport for full screen
 	pglViewport( 0, 0, gbuffer.width, gbuffer.height );
@@ -549,6 +583,31 @@ void R_DeferredLightingPass( void )
 	if( lightingShader.uDebugMode >= 0 )
 		pglUniform1i( lightingShader.uDebugMode, debugMode );
 
+	// Set VXGI uniforms
+	if( lightingShader.uVXGIEnabled >= 0 )
+		pglUniform1i( lightingShader.uVXGIEnabled, vxgiActive ? 1 : 0 );
+
+	if( vxgiActive )
+	{
+		// Compute inverse view-projection matrix for world position reconstruction
+		Matrix4x4_Invert_Full( invViewProj, RI.worldviewProjectionMatrix );
+
+		if( lightingShader.uGridMin >= 0 )
+			pglUniform3fv( lightingShader.uGridMin, 1, R_VXGIGetGridMins() );
+		if( lightingShader.uGridMax >= 0 )
+			pglUniform3fv( lightingShader.uGridMax, 1, R_VXGIGetGridMaxs() );
+		if( lightingShader.uGridSize >= 0 )
+			pglUniform1f( lightingShader.uGridSize, (float)R_VXGIGetGridSize() );
+		if( lightingShader.uVoxelSize >= 0 )
+			pglUniform1f( lightingShader.uVoxelSize, R_VXGIGetVoxelSize() );
+		if( lightingShader.uInvViewProj >= 0 )
+			pglUniformMatrix4fv( lightingShader.uInvViewProj, 1, GL_FALSE, (const float *)invViewProj );
+		if( lightingShader.uCameraPos >= 0 )
+			pglUniform3fv( lightingShader.uCameraPos, 1, RI.vieworg );
+		if( lightingShader.uVXGIIntensity >= 0 )
+			pglUniform1f( lightingShader.uVXGIIntensity, R_VXGIGetIntensity() );
+	}
+
 	// Bind G-buffer textures
 	// Unit 0: Albedo
 	pglActiveTexture( GL_TEXTURE0_ARB );
@@ -562,12 +621,30 @@ void R_DeferredLightingPass( void )
 	pglActiveTexture( GL_TEXTURE0_ARB + 2 );
 	pglBindTexture( GL_TEXTURE_2D, gbuffer.lightmapTex );
 
+	// Unit 3: Depth (for world position reconstruction)
+	pglActiveTexture( GL_TEXTURE0_ARB + 3 );
+	pglBindTexture( GL_TEXTURE_2D, gbuffer.depthTex );
+
+	// Unit 4: Voxel texture (if VXGI active)
+	if( vxgiActive )
+	{
+		pglActiveTexture( GL_TEXTURE0_ARB + 4 );
+		pglBindTexture( GL_TEXTURE_3D, R_VXGIGetVoxelTexture() );
+	}
+
 	// Bind VAO and draw fullscreen triangle
 	pglBindVertexArray( lightingShader.vao );
 	pglDrawArrays( GL_TRIANGLES, 0, 3 );
 	pglBindVertexArray( 0 );
 
 	// Cleanup
+	if( vxgiActive )
+	{
+		pglActiveTexture( GL_TEXTURE0_ARB + 4 );
+		pglBindTexture( GL_TEXTURE_3D, 0 );
+	}
+	pglActiveTexture( GL_TEXTURE0_ARB + 3 );
+	pglBindTexture( GL_TEXTURE_2D, 0 );
 	pglActiveTexture( GL_TEXTURE0_ARB + 2 );
 	pglBindTexture( GL_TEXTURE_2D, 0 );
 	pglActiveTexture( GL_TEXTURE0_ARB + 1 );

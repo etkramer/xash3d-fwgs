@@ -546,6 +546,21 @@ qboolean R_DeferredActive( void );
 qboolean R_InGBufferPass( void );
 
 //
+// gl_vxgi.c
+//
+qboolean R_InitVXGI( void );
+void R_ShutdownVXGI( void );
+qboolean R_VXGIActive( void );
+void R_VXGIUpdate( void );
+GLuint R_VXGIGetVoxelTexture( void );
+const float *R_VXGIGetGridMins( void );
+const float *R_VXGIGetGridMaxs( void );
+int R_VXGIGetGridSize( void );
+float R_VXGIGetVoxelSize( void );
+float R_VXGIGetIntensity( void );
+int R_VXGIGetDebugMode( void );
+
+//
 // gl_opengl.c
 //
 #define GL_CheckForErrors() GL_CheckForErrors_( __FILE__, __LINE__ )

@@ -1054,6 +1054,9 @@ void R_RenderScene( void )
 
 	if( deferredActive )
 	{
+		// Update VXGI voxel grid (inject lights)
+		R_VXGIUpdate();
+
 		// Apply deferred lighting to composited g-buffer
 		R_DeferredLightingPass();
 
