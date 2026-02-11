@@ -39,13 +39,13 @@ vec3 WorldToVoxelUV( vec3 worldPos )
 }
 
 // Cone trace through voxel grid (simplified, no mipmaps)
+// origin should already be offset from the surface to avoid self-occlusion
 vec4 ConeTrace( vec3 origin, vec3 direction, float coneAngle )
 {
 	vec3 color = vec3( 0.0 );
 	float alpha = 0.0;
 
-	float startDist = uVoxelSize * 2.0; // Start offset to avoid self-occlusion
-	float dist = startDist;
+	float dist = uVoxelSize * 0.5; // Small offset from pre-offset origin
 	float maxDist = 1000.0;
 	float stepSize = uVoxelSize * 1.5;
 
@@ -79,6 +79,11 @@ vec3 IndirectDiffuse( vec3 worldPos, vec3 normal )
 	vec3 indirect = vec3( 0.0 );
 	float coneAngle = 0.577; // ~33 degrees
 
+	// Offset starting position along normal to avoid self-occlusion
+	// All cones start from this same offset position - this prevents
+	// sideways-pointing cones from starting inside walls or lit voxels
+	vec3 startPos = worldPos + normal * uVoxelSize * 2.0;
+
 	// Build tangent space
 	vec3 up = abs( normal.y ) < 0.999 ? vec3( 0.0, 1.0, 0.0 ) : vec3( 1.0, 0.0, 0.0 );
 	vec3 tangent = normalize( cross( up, normal ) );
@@ -102,10 +107,10 @@ vec3 IndirectDiffuse( vec3 worldPos, vec3 normal )
 	coneWeights[4] = 0.15;
 	coneWeights[5] = 0.15;
 
-	// Trace each cone
+	// Trace each cone from the normal-offset position
 	for( int i = 0; i < 6; i++ )
 	{
-		indirect += coneWeights[i] * ConeTrace( worldPos, coneDirections[i], coneAngle ).rgb;
+		indirect += coneWeights[i] * ConeTrace( startPos, coneDirections[i], coneAngle ).rgb;
 	}
 
 	return indirect;

@@ -18,6 +18,11 @@ GNU General Public License for more details.
 #define VXGI_GRID_SIZE 64
 #define VXGI_MAX_LIGHTS 256
 
+// Light radius caps scale with grid size to maintain consistent world-space coverage
+// At GRID_SIZE=64: dynamic=8, static=12. Scale proportionally for larger grids.
+#define VXGI_MAX_DLIGHT_RADIUS ( VXGI_GRID_SIZE / 8 )   // ~12.5% of grid
+#define VXGI_MAX_SLIGHT_RADIUS ( VXGI_GRID_SIZE / 5 )   // ~20% of grid for static lights
+
 // VXGI cvars
 static cvar_t *gl_vxgi;
 static cvar_t *gl_vxgi_intensity;
@@ -421,9 +426,9 @@ static void R_VXGIInjectLights( void )
 		    vz < 0 || vz >= VXGI_GRID_SIZE )
 			continue;
 
-		// Radius in voxels
+		// Radius in voxels (cap scales with grid size)
 		radius_voxels = (int)( dl->radius / vxgi.voxelSize ) + 1;
-		radius_voxels = Q_min( radius_voxels, 8 ); // Cap to prevent huge fills
+		radius_voxels = Q_min( radius_voxels, VXGI_MAX_DLIGHT_RADIUS );
 
 		// Fill voxels within radius
 		for( z = Q_max( 0, vz - radius_voxels ); z < Q_min( VXGI_GRID_SIZE, vz + radius_voxels ); z++ )
@@ -484,7 +489,7 @@ static void R_VXGIInjectLights( void )
 			continue;
 
 		radius_voxels = (int)( el->radius / vxgi.voxelSize ) + 1;
-		radius_voxels = Q_min( radius_voxels, 8 );
+		radius_voxels = Q_min( radius_voxels, VXGI_MAX_DLIGHT_RADIUS );
 
 		for( z = Q_max( 0, vz - radius_voxels ); z < Q_min( VXGI_GRID_SIZE, vz + radius_voxels ); z++ )
 		{
@@ -546,7 +551,7 @@ static void R_VXGIInjectLights( void )
 		// Light radius in world units (intensity is typically 0-255 range, scale up)
 		lightRadius = light->intensity * 1.5f;
 		radius_voxels = (int)( lightRadius / vxgi.voxelSize ) + 1;
-		radius_voxels = Q_min( radius_voxels, 12 ); // Allow slightly larger radius for static lights
+		radius_voxels = Q_min( radius_voxels, VXGI_MAX_SLIGHT_RADIUS );
 
 		for( z = Q_max( 0, vz - radius_voxels ); z < Q_min( VXGI_GRID_SIZE, vz + radius_voxels ); z++ )
 		{
