@@ -124,6 +124,7 @@ void main()
 
 	// Direct lighting from lightmap
 	vec3 directLight = lightmap.rgb;
+	directLight = vec3(0);
 
 	// Indirect lighting via VXGI cone tracing
 	vec3 indirectLight = vec3( 0.0 );

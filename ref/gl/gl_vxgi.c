@@ -16,11 +16,21 @@ GNU General Public License for more details.
 #include "gl_local.h"
 
 #define VXGI_GRID_SIZE 64
+#define VXGI_MAX_LIGHTS 256
 
 // VXGI cvars
 static cvar_t *gl_vxgi;
 static cvar_t *gl_vxgi_intensity;
 static cvar_t *gl_vxgi_debug;
+
+// Static light parsed from BSP entities
+typedef struct
+{
+	vec3_t origin;
+	vec3_t color;      // RGB normalized 0-1
+	float intensity;   // Light intensity/radius
+	qboolean valid;
+} vxgi_light_t;
 
 // VXGI state
 static struct
@@ -31,6 +41,11 @@ static struct
 	float voxelSize;           // Size of one voxel in world units
 	qboolean initialized;
 	qboolean available;
+
+	// Parsed static lights from BSP
+	vxgi_light_t lights[VXGI_MAX_LIGHTS];
+	int numLights;
+	qboolean lightsParsed;
 } vxgi;
 
 
@@ -156,19 +171,30 @@ Computes the voxel grid bounds from the world model
 */
 static void R_VXGIComputeBounds( void )
 {
-	vec3_t size;
+	vec3_t size, center;
 	float maxExtent;
 
 	if( !WORLDMODEL )
 		return;
 
-	// Get world bounds
-	VectorCopy( WORLDMODEL->mins, vxgi.gridMins );
-	VectorCopy( WORLDMODEL->maxs, vxgi.gridMaxs );
+	// Get world bounds and compute center
+	VectorAdd( WORLDMODEL->mins, WORLDMODEL->maxs, center );
+	VectorScale( center, 0.5f, center );
 
-	// Compute voxel size
-	VectorSubtract( vxgi.gridMaxs, vxgi.gridMins, size );
+	// Compute max extent for cubic grid
+	VectorSubtract( WORLDMODEL->maxs, WORLDMODEL->mins, size );
 	maxExtent = Q_max( size[0], Q_max( size[1], size[2] ) );
+
+	// Make grid cubic - use maxExtent for all axes to ensure uniform voxel size
+	// This fixes anisotropic sampling where cone tracing would step at different
+	// rates along different axes, causing position-dependent shiny artifacts
+	vxgi.gridMins[0] = center[0] - maxExtent * 0.5f;
+	vxgi.gridMins[1] = center[1] - maxExtent * 0.5f;
+	vxgi.gridMins[2] = center[2] - maxExtent * 0.5f;
+	vxgi.gridMaxs[0] = center[0] + maxExtent * 0.5f;
+	vxgi.gridMaxs[1] = center[1] + maxExtent * 0.5f;
+	vxgi.gridMaxs[2] = center[2] + maxExtent * 0.5f;
+
 	vxgi.voxelSize = maxExtent / VXGI_GRID_SIZE;
 }
 
@@ -199,6 +225,109 @@ static void R_VXGIClearVoxels( void )
 
 /*
 ================
+R_VXGIParseLights
+
+Parses light entities from the BSP entity lump
+================
+*/
+static void R_VXGIParseLights( void )
+{
+	char *data;
+	char token[2048];
+	char key[256], value[256];
+
+	vxgi.numLights = 0;
+	vxgi.lightsParsed = true;
+
+	if( !WORLDMODEL || !WORLDMODEL->entities )
+		return;
+
+	data = (char *)WORLDMODEL->entities;
+
+	// Parse entities
+	while( data )
+	{
+		// Parse opening brace
+		data = COM_ParseFile( data, token, sizeof( token ));
+		if( !data )
+			break;
+		if( token[0] != '{' )
+			continue;
+
+		// Initialize temporary light data
+		vec3_t origin = { 0, 0, 0 };
+		vec3_t color = { 1.0f, 1.0f, 1.0f };
+		float intensity = 300.0f;  // Default light radius
+		qboolean isLight = false;
+		qboolean hasOrigin = false;
+
+		// Parse key-value pairs
+		while( data )
+		{
+			data = COM_ParseFile( data, token, sizeof( token ));
+			if( !data || token[0] == '}' )
+				break;
+
+			Q_strncpy( key, token, sizeof( key ));
+
+			data = COM_ParseFile( data, token, sizeof( token ));
+			if( !data )
+				break;
+
+			Q_strncpy( value, token, sizeof( value ));
+
+			// Check classname
+			if( !Q_stricmp( key, "classname" ))
+			{
+				if( !Q_strnicmp( value, "light", 5 ))
+					isLight = true;
+			}
+			// Parse origin
+			else if( !Q_stricmp( key, "origin" ))
+			{
+				if( sscanf( value, "%f %f %f", &origin[0], &origin[1], &origin[2] ) == 3 )
+					hasOrigin = true;
+			}
+			// Parse _light (RGBA or RGB + intensity)
+			else if( !Q_stricmp( key, "_light" ))
+			{
+				int r, g, b, i;
+				if( sscanf( value, "%d %d %d %d", &r, &g, &b, &i ) == 4 )
+				{
+					color[0] = r / 255.0f;
+					color[1] = g / 255.0f;
+					color[2] = b / 255.0f;
+					intensity = (float)i;
+				}
+				else if( sscanf( value, "%d %d %d", &r, &g, &b ) == 3 )
+				{
+					color[0] = r / 255.0f;
+					color[1] = g / 255.0f;
+					color[2] = b / 255.0f;
+				}
+			}
+			// Parse light (intensity only, older format)
+			else if( !Q_stricmp( key, "light" ))
+			{
+				intensity = Q_atof( value );
+			}
+		}
+
+		// Add light if valid
+		if( isLight && hasOrigin && vxgi.numLights < VXGI_MAX_LIGHTS )
+		{
+			vxgi_light_t *light = &vxgi.lights[vxgi.numLights];
+			VectorCopy( origin, light->origin );
+			VectorCopy( color, light->color );
+			light->intensity = intensity;
+			light->valid = true;
+			vxgi.numLights++;
+		}
+	}
+}
+
+/*
+================
 R_VXGIInjectLights
 
 Injects dynamic lights into the voxel grid
@@ -209,7 +338,6 @@ static void R_VXGIInjectLights( void )
 	int i;
 	byte *voxelData;
 	vec3_t gridSize;
-	int numLightsInjected = 0;
 
 	VectorSubtract( vxgi.gridMaxs, vxgi.gridMins, gridSize );
 
@@ -263,7 +391,6 @@ static void R_VXGIInjectLights( void )
 					}
 				}
 			}
-			numLightsInjected++;
 		}
 	}
 
@@ -389,6 +516,69 @@ static void R_VXGIInjectLights( void )
 		}
 	}
 
+	// Inject static lights from BSP
+	for( i = 0; i < vxgi.numLights; i++ )
+	{
+		vxgi_light_t *light = &vxgi.lights[i];
+		vec3_t voxelPos;
+		int vx, vy, vz;
+		int radius_voxels;
+		int x, y, z;
+		float lightRadius;
+
+		if( !light->valid )
+			continue;
+
+		// Convert world position to voxel coordinates
+		voxelPos[0] = ( light->origin[0] - vxgi.gridMins[0] ) / gridSize[0] * VXGI_GRID_SIZE;
+		voxelPos[1] = ( light->origin[1] - vxgi.gridMins[1] ) / gridSize[1] * VXGI_GRID_SIZE;
+		voxelPos[2] = ( light->origin[2] - vxgi.gridMins[2] ) / gridSize[2] * VXGI_GRID_SIZE;
+
+		vx = (int)voxelPos[0];
+		vy = (int)voxelPos[1];
+		vz = (int)voxelPos[2];
+
+		if( vx < 0 || vx >= VXGI_GRID_SIZE ||
+		    vy < 0 || vy >= VXGI_GRID_SIZE ||
+		    vz < 0 || vz >= VXGI_GRID_SIZE )
+			continue;
+
+		// Light radius in world units (intensity is typically 0-255 range, scale up)
+		lightRadius = light->intensity * 1.5f;
+		radius_voxels = (int)( lightRadius / vxgi.voxelSize ) + 1;
+		radius_voxels = Q_min( radius_voxels, 12 ); // Allow slightly larger radius for static lights
+
+		for( z = Q_max( 0, vz - radius_voxels ); z < Q_min( VXGI_GRID_SIZE, vz + radius_voxels ); z++ )
+		{
+			for( y = Q_max( 0, vy - radius_voxels ); y < Q_min( VXGI_GRID_SIZE, vy + radius_voxels ); y++ )
+			{
+				for( x = Q_max( 0, vx - radius_voxels ); x < Q_min( VXGI_GRID_SIZE, vx + radius_voxels ); x++ )
+				{
+					float dist = sqrt( (float)((x-vx)*(x-vx) + (y-vy)*(y-vy) + (z-vz)*(z-vz)) );
+					float atten = 1.0f - ( dist * vxgi.voxelSize / lightRadius );
+					int idx;
+					byte r, g, b;
+
+					if( atten <= 0.0f )
+						continue;
+
+					atten = Q_min( atten, 1.0f );
+					idx = ( z * VXGI_GRID_SIZE * VXGI_GRID_SIZE + y * VXGI_GRID_SIZE + x ) * 4;
+
+					// Add light contribution with color
+					r = (byte)Q_min( 255, voxelData[idx + 0] + (int)( light->color[0] * 255.0f * atten ) );
+					g = (byte)Q_min( 255, voxelData[idx + 1] + (int)( light->color[1] * 255.0f * atten ) );
+					b = (byte)Q_min( 255, voxelData[idx + 2] + (int)( light->color[2] * 255.0f * atten ) );
+
+					voxelData[idx + 0] = r;
+					voxelData[idx + 1] = g;
+					voxelData[idx + 2] = b;
+					voxelData[idx + 3] = 255;
+				}
+			}
+		}
+	}
+
 	// Upload to texture
 	pglBindTexture( GL_TEXTURE_3D, vxgi.voxelTex );
 	pglTexSubImage3D( GL_TEXTURE_3D, 0, 0, 0, 0,
@@ -409,8 +599,20 @@ Called once per frame to update the voxel grid
 */
 void R_VXGIUpdate( void )
 {
+	static model_t *lastWorldModel = NULL;
+
 	if( !R_VXGIActive() )
 		return;
+
+	// Parse lights when world model changes (new map loaded)
+	if( WORLDMODEL != lastWorldModel )
+	{
+		lastWorldModel = WORLDMODEL;
+		vxgi.lightsParsed = false;
+	}
+
+	if( !vxgi.lightsParsed )
+		R_VXGIParseLights();
 
 	// Compute grid bounds from world
 	R_VXGIComputeBounds();
